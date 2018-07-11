@@ -20,6 +20,7 @@ namespace ContractConfigurator.RemoteTech
         GameScenes.FLIGHT, GameScenes.TRACKSTATION, GameScenes.SPACECENTER)]
     public class RemoteTechProgressTracker : ScenarioModule
     {
+        private static double DIST_FACTOR = 1.0 / Math.Sqrt(3.0);
         private class FakeSatellite : ISatellite
         {
             private class FakeAntenna : IAntenna
@@ -30,6 +31,7 @@ namespace ContractConfigurator.RemoteTech
                 public bool Powered { get { return true; } }
                 public bool Connected { get { return true; } }
                 public bool CanTarget { get { return false; } }
+                public bool CanRelaySignal { get { return false; } }
                 public Guid Target { get { return Guid.Empty; } set { } }
                 public float Dish { get { return -1.0f; } }
                 public double CosAngle { get { return 1.0f; } }
@@ -58,6 +60,9 @@ namespace ContractConfigurator.RemoteTech
             public bool Powered { get { return true; } }
             public bool IsCommandStation { get { return true; } }
             public bool HasLocalControl { get { return true; } }
+
+            public bool CanRelaySignal { get { return false; } }
+            public bool IsInRadioBlackout { get; set; }
 
             /// <summary>
             /// Indicates whether the ISatellite corresponds to a vessel
@@ -107,9 +112,9 @@ namespace ContractConfigurator.RemoteTech
             /// </summary>
             public static double DistanceTo(ISatellite a, ISatellite b)
             {
-                return Math.Abs(a.Position.x - b.Position.x) +
+                return (Math.Abs(a.Position.x - b.Position.x) +
                     Math.Abs(a.Position.y - b.Position.y) +
-                    Math.Abs(a.Position.z - b.Position.z);
+                    Math.Abs(a.Position.z - b.Position.z)) * DIST_FACTOR;
             }
 
             /// <summary>
@@ -117,9 +122,9 @@ namespace ContractConfigurator.RemoteTech
             /// </summary>
             public static double DistanceTo(ISatellite a, NetworkLink<ISatellite> b)
             {
-                return Math.Abs(a.Position.x - b.Target.Position.x) +
+                return (Math.Abs(a.Position.x - b.Target.Position.x) +
                     Math.Abs(a.Position.y - b.Target.Position.y) +
-                    Math.Abs(a.Position.z - b.Target.Position.z);
+                    Math.Abs(a.Position.z - b.Target.Position.z)) * DIST_FACTOR;
             }
 
         }

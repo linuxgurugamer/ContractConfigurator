@@ -395,7 +395,7 @@ namespace ContractConfigurator
             // Do newline conversions
             else if (typeof(T) == typeof(string))
             {
-                value = (T)(object)stringValue.Replace("\\n", "\n");
+                value = (T)(object)stringValue.Replace("&br;", "\n").Replace("\\n", "\n");
             }
             // Try a basic type
             else
@@ -900,7 +900,7 @@ namespace ContractConfigurator
 
         public static CelestialBody ParseCelestialBodyValue(string celestialName)
         {
-            CelestialBody result = FlightGlobals.Bodies.Where(cb => cb.name == celestialName || cb.theName == celestialName).FirstOrDefault();
+            CelestialBody result = FlightGlobals.Bodies.Where(cb => cb.name == celestialName || string.Equals(cb.CleanDisplayName(), celestialName, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
             if (result == null)
             {
                 throw new ArgumentException("'" + celestialName + "' is not a valid CelestialBody.");

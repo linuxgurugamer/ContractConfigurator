@@ -15,6 +15,8 @@ namespace ContractConfigurator.ExpressionParser
     {
         static MethodInfo methodParseValue = typeof(ConfigNodeUtil).GetMethods(BindingFlags.Static | BindingFlags.Public).
             Where(m => m.Name == "ParseValue" && m.GetParameters().Count() == 4).Single();
+        static MethodInfo methodParseValueLiteral = typeof(ConfigNodeUtil).GetMethods(BindingFlags.Static | BindingFlags.Public).
+            Where(m => m.Name == "ParseValue" && m.GetParameters().Count() == 3 && m.GetParameters()[2].ParameterType == typeof(bool)).Single();
 
         public enum UniquenessCheck
         {
@@ -44,6 +46,10 @@ namespace ContractConfigurator.ExpressionParser
                 value = v;
                 deterministic = d;
                 initialized = true;
+                if (v != null)
+                {
+                    type = v.GetType();
+                }
             }
         }
 
@@ -277,6 +283,10 @@ namespace ContractConfigurator.ExpressionParser
             {
                 output = ((Vessel)(value)).vesselName;
             }
+            else if (type == typeof(Experience.ExperienceTrait))
+            {
+                output = ((Experience.ExperienceTrait)(value)).TypeName;
+            }
             else if (type.Name == "List`1")
             {
                 output = "[ ";
@@ -340,6 +350,7 @@ namespace ContractConfigurator.ExpressionParser
                 Type type = null;
                 bool requiredValue = true;
                 bool hidden = true;
+                bool isLiteral = false;
                 string title = "";
 
                 ConfigNodeUtil.SetCurrentDataNode(null);
@@ -347,6 +358,7 @@ namespace ContractConfigurator.ExpressionParser
                 valid &= ConfigNodeUtil.ParseValue<bool>(data, "requiredValue", x => requiredValue = x, obj, true);
                 valid &= ConfigNodeUtil.ParseValue<string>(data, "title", x => title = x, obj, "");
                 valid &= ConfigNodeUtil.ParseValue<bool>(data, "hidden", x => hidden = x, obj, false);
+                valid &= ConfigNodeUtil.ParseValue<bool>(data, "isLiteral", x => isLiteral = x, obj, false);
 
                 bool doneTitleWarning = false;
 
@@ -375,7 +387,7 @@ namespace ContractConfigurator.ExpressionParser
                     foreach (ConfigNode.Value pair in data.values)
                     {
                         string name = pair.name;
-                        if (name != "type" && name != "title" && name != "hidden" && name != "requiredValue" && name != "uniqueValue" && name != "activeUniqueValue" && name != "uniquenessCheck")
+                        if (name != "type" && name != "title" && name != "hidden" && name != "requiredValue" && name != "uniqueValue" && name != "activeUniqueValue" && name != "uniquenessCheck" && name != "isLiteral")
                         {
                             if (uniquenessCheck != UniquenessCheck.NONE)
                             {
@@ -389,10 +401,17 @@ namespace ContractConfigurator.ExpressionParser
                             Delegate del = Delegate.CreateDelegate(actionType, value, typeof(DataNode).GetMethod("NullAction"));
 
                             // Set the ParseValue method generic
-                            MethodInfo method = methodParseValue.MakeGenericMethod(new Type[] { type });
+                            MethodInfo method = (isLiteral ? methodParseValueLiteral : methodParseValue).MakeGenericMethod(new Type[] { type });
 
                             // Invoke the ParseValue method
-                            valid &= (bool)method.Invoke(null, new object[] { data, name, del, obj });
+                            if (isLiteral)
+                            {
+                                this[name] = method.Invoke(null, new object[] { data, name, false });
+                            }
+                            else
+                            {
+                                valid &= (bool)method.Invoke(null, new object[] { data, name, del, obj });
+                            }
 
                             dataValues[name] = new ContractType.DataValueInfo(title, requiredValue, hidden, type);
 

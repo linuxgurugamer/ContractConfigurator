@@ -5,6 +5,7 @@ using System.Text;
 using UnityEngine;
 using KSP;
 using KSP.UI.Screens;
+using KSP.Localization;
 using Contracts;
 using ContractConfigurator;
 using ContractConfigurator.ExpressionParser;
@@ -226,7 +227,7 @@ namespace ContractConfigurator.Behaviour
 
             public override void OnSave(ConfigNode configNode)
             {
-                configNode.AddValue("text", text.Replace("\n", "\\n"));
+                configNode.AddValue("text", text.Replace("\n", "&br;"));
                 int a = (int)(textColor.a * 255);
                 int r = (int)(textColor.r * 255);
                 int g = (int)(textColor.g * 255);
@@ -428,7 +429,7 @@ namespace ContractConfigurator.Behaviour
 
                     if (string.IsNullOrEmpty(characterName))
                     {
-                        characterName = instructor.CharacterName;
+                        characterName = Localizer.GetStringByTag(instructor.CharacterName);
                     }
 
                     instructor.SetupAnimations();

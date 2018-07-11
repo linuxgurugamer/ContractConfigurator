@@ -15,6 +15,8 @@ namespace ContractConfigurator.ExpressionParser
     /// </summary>
     public class CelestialBodyParser : ClassExpressionParser<CelestialBody>, IExpressionParserRegistrer
     {
+        private static string[] emptyStrArr = new string[] { };
+
         private enum CelestialBodyType
         {
             NOT_APPLICABLE,
@@ -110,7 +112,7 @@ namespace ContractConfigurator.ExpressionParser
         {
             if (typeof(U) == typeof(string))
             {
-                return (U)(object)value.theName;
+                return (U)(object)value.CleanDisplayName(true);
             }
             return base.ConvertType<U>(value);
         }
@@ -139,18 +141,23 @@ namespace ContractConfigurator.ExpressionParser
 
         private static bool CheckTree(CelestialBodySubtree tree, ProgressItem pi)
         {
+            if (tree == null)
+            {
+                return false;
+            }
+
             switch (pi)
             {
                 case ProgressItem.REACHED:
                     return tree.IsReached;
                 case ProgressItem.ORBITED:
-                    return tree.orbit.IsComplete;
+                    return tree.orbit != null && tree.orbit.IsComplete;
                 case ProgressItem.LANDED:
-                    return tree.landing.IsComplete;
+                    return tree.landing != null && tree.landing.IsComplete;
                 case ProgressItem.ESCAPED:
-                    return tree.escape.IsComplete;
+                    return tree.escape != null && tree.escape.IsComplete;
                 case ProgressItem.RETURNED_FROM:
-                    return tree.returnFromFlyby.IsComplete;
+                    return tree.returnFromFlyby != null && tree.returnFromFlyby.IsComplete;
             }
 
             return false;
@@ -207,7 +214,13 @@ namespace ContractConfigurator.ExpressionParser
                 // For barycenters, the biggest one is a planet, the rest are moons.
                 if (cb.referenceBody.Radius < BARYCENTER_THRESHOLD)
                 {
-                    return cb == cb.referenceBody.orbitingBodies.MaxAt(child => child.Mass) ? CelestialBodyType.PLANET : CelestialBodyType.MOON;
+                    for (int i = cb.referenceBody.orbitingBodies.Count; --i >= 0; )
+                    {
+                        if (cb.referenceBody.orbitingBodies[i].Mass > cb.Mass)
+                        {
+                            return CelestialBodyType.MOON;
+                        }
+                    }
                 }
 
                 return CelestialBodyType.PLANET;
@@ -219,7 +232,7 @@ namespace ContractConfigurator.ExpressionParser
 
         public override CelestialBody ParseIdentifier(Token token)
         {
-            // Try to parse more, as celestibla body names can have spaces
+            // Try to parse more, as celestial body names can have spaces
             Match m = Regex.Match(expression, @"^((?>\s*[\w\d]+)+).*");
             string identifier = m.Groups[1].Value;
             expression = (expression.Length > identifier.Length ? expression.Substring(identifier.Length) : "");
@@ -229,7 +242,16 @@ namespace ContractConfigurator.ExpressionParser
             {
                 return null;
             }
-            return ConfigNodeUtil.ParseCelestialBodyValue(identifier);
+
+            try
+            {
+                return ConfigNodeUtil.ParseCelestialBodyValue(identifier);
+            }
+            // Treat invalid CBs as null, improves compatibility with planet packs
+            catch (ArgumentException)
+            {
+                return null;
+            }
         }
     }
 }

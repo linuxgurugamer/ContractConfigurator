@@ -52,12 +52,14 @@ namespace ContractConfigurator
 
             OnParameterChange.Add(new EventData<Contract, ContractParameter>.OnEvent(ParameterChange));
             GameEvents.OnTechnologyResearched.Add(new EventData<GameEvents.HostTargetAction<RDTech, RDTech.OperationResult>>.OnEvent(OnTechResearched));
+            GameEvents.Contract.onParameterChange.Add(new EventData<Contract, ContractParameter>.OnEvent(StockOnParameterChange));
         }
 
         void Destroy()
         {
             OnParameterChange.Remove(new EventData<Contract, ContractParameter>.OnEvent(ParameterChange));
             GameEvents.OnTechnologyResearched.Remove(new EventData<GameEvents.HostTargetAction<RDTech, RDTech.OperationResult>>.OnEvent(OnTechResearched));
+            GameEvents.Contract.onParameterChange.Remove(new EventData<Contract, ContractParameter>.OnEvent(StockOnParameterChange));
         }
 
         void PSystemReady()
@@ -72,11 +74,11 @@ namespace ContractConfigurator
             RegisterParameterFactories();
             RegisterBehaviourFactories();
             RegisterContractRequirements();
-            IEnumerator<YieldInstruction> iterator = LoadContractConfig();
-                while (iterator.MoveNext()) { }
+            IEnumerator<YieldInstruction> iterator = LoadGroupConfig();
+            while (iterator.MoveNext()) { }
             DebugWindow.LoadTextures();
 
-            LoggingUtil.LogInfo(this, "Contract Configurator " + ainfoV.InformationalVersion + " finished loading.");
+            StartCoroutine(FinalizeContractTypeLoad());
         }
 
         void Update()
@@ -126,6 +128,23 @@ namespace ContractConfigurator
         private void ParameterChange(Contract c, ContractParameter p)
         {
             GameEvents.Contract.onParameterChange.Fire(c, p);
+        }
+
+        void StockOnParameterChange(Contract c, ContractParameter p)
+        {
+            // Workaround for stock bug #18267
+            if (p.State == ParameterState.Complete && p.FundsCompletion == 0 && p.ScienceCompletion == 0 && p.ReputationCompletion == 0)
+            {
+                Versioning v = Versioning.Instance as Versioning;
+                if (v.versionMajor == 1 && v.versionMinor == 4 && v.revision == 2)
+                {
+                    MessageSystem.Message message = MessageSystem.Instance.FindMessages(m => m.message.Contains(p.MessageComplete)).FirstOrDefault();
+                    if (message != null)
+                    {
+                        MessageSystem.Instance.DiscardMessage(message.button);
+                    }
+                }
+            }
         }
 
         public void OnGUI()
@@ -201,7 +220,7 @@ namespace ContractConfigurator
 
             // Load contract configurator
             reloadStep = ReloadStep.LOAD_CONFIG;
-            IEnumerator<YieldInstruction> iterator = LoadContractConfig();
+            IEnumerator<YieldInstruction> iterator = LoadAllContractConfig();
             while (iterator.MoveNext())
             {
                 yield return iterator.Current;
@@ -322,7 +341,24 @@ namespace ContractConfigurator
         /// <summary>
         /// Loads all the contact configuration nodes and creates ContractType objects.
         /// </summary>
-        private IEnumerator<YieldInstruction> LoadContractConfig()
+        private IEnumerator<YieldInstruction> LoadAllContractConfig()
+        {
+            IEnumerator<YieldInstruction> iterator = LoadGroupConfig();
+            while (iterator.MoveNext())
+            {
+                yield return iterator.Current;
+            }
+            iterator = LoadContractTypeConfig();
+            while (iterator.MoveNext())
+            {
+                yield return iterator.Current;
+            }
+        }
+
+        /// <summary>
+        /// Loads all the contact configuration group nodes.
+        /// </summary>
+        private IEnumerator<YieldInstruction> LoadGroupConfig()
         {
             // Load all the contract groups
             LoggingUtil.LogDebug(this, "Loading CONTRACT_GROUP nodes.");
@@ -367,6 +403,42 @@ namespace ContractConfigurator
                 }
             }
 
+            if (!reloading)
+            {
+                yield return new WaitForEndOfFrame();
+            }
+
+            // Emit settings for the menu
+            SettingsBuilder.EmitSettings();
+
+            yield break;
+        }
+
+        public IEnumerator<YieldInstruction> FinalizeContractTypeLoad()
+        {
+            YieldInstruction eof = new WaitForEndOfFrame();
+            while (HighLogic.LoadedScene != GameScenes.MAINMENU)
+            {
+                yield return eof;
+            }
+            yield return eof;
+
+            IEnumerator<YieldInstruction> iterator = LoadContractTypeConfig();
+            while (iterator.MoveNext())
+            {
+                yield return iterator.Current;
+            }
+
+            var ainfoV = Attribute.GetCustomAttribute(typeof(ContractConfigurator).Assembly,
+                    typeof(AssemblyInformationalVersionAttribute)) as AssemblyInformationalVersionAttribute;
+            LoggingUtil.LogInfo(this, "Contract Configurator " + ainfoV.InformationalVersion + " finished loading.");
+        }
+
+        /// <summary>
+        /// Loads all the contact type nodes and creates ContractType objects.
+        /// </summary>
+        private IEnumerator<YieldInstruction> LoadContractTypeConfig()
+        {
             LoggingUtil.LogDebug(this, "Loading CONTRACT_TYPE nodes.");
             ConfigNode[] contractConfigs = GameDatabase.Instance.GetConfigNodes("CONTRACT_TYPE");
             totalContracts = contractConfigs.Count();
@@ -390,7 +462,10 @@ namespace ContractConfigurator
             foreach (ConfigNode contractConfig in contractConfigs)
             {
                 attemptedContracts++;
-                yield return new WaitForEndOfFrame();
+                if (reloading)
+                {
+                    yield return new WaitForEndOfFrame();
+                }
 
                 // Fetch the contractType
                 string name = contractConfig.GetValue("name");
@@ -423,9 +498,6 @@ namespace ContractConfigurator
 
             // Load other things
             MissionControlUI.GroupContainer.LoadConfig();
-
-            // Emit settings for the menu
-            SettingsBuilder.EmitSettings();
 
             if (!reloading && LoggingUtil.logLevel == LoggingUtil.LogLevel.DEBUG || LoggingUtil.logLevel == LoggingUtil.LogLevel.VERBOSE)
             {
@@ -473,9 +545,12 @@ namespace ContractConfigurator
         // Remove experimental parts when a tech is researched
         private void OnTechResearched(GameEvents.HostTargetAction<RDTech, RDTech.OperationResult> hta)
         {
-            foreach (AvailablePart p in hta.host.partsAssigned)
+            if (hta.target == RDTech.OperationResult.Successful)
             {
-                ResearchAndDevelopment.RemoveExperimentalPart(p);
+                foreach (AvailablePart p in hta.host.partsAssigned)
+                {
+                    ResearchAndDevelopment.RemoveExperimentalPart(p);
+                }
             }
         }
 

@@ -262,8 +262,7 @@ namespace ContractConfigurator
                 if (string.IsNullOrEmpty(contractType.description) && agent != null)
                 {
                     // Generate the contract description
-                    description = TextGen.GenerateBackStories(agent.Name, agent.GetMindsetString(),
-                        contractType.topic, contractType.subject, contractType.motivation, random.Next());
+                    description = TextGen.GenerateBackStories("ConfiguredContract", agent.Name, contractType.topic, contractType.subject, random.Next(), true, true, true);
                 }
                 else
                 {
@@ -460,6 +459,12 @@ namespace ContractConfigurator
                     behaviours.Add(behaviour);
                 }
 
+                foreach (ConfigNode child in node.GetNodes("REQUIREMENT"))
+                {
+                    ContractRequirement requirement = ContractRequirement.LoadRequirement(child);
+                    requirements.Add(requirement);
+                }
+
                 // If the contract type is null, then it likely means that it was uninstalled
                 if (contractType == null)
                 {
@@ -501,23 +506,23 @@ namespace ContractConfigurator
                 node.AddValue("subtype", subType);
                 if (!string.IsNullOrEmpty(title))
                 {
-                    node.AddValue("title", title.Replace("\n", "\\n"));
+                    node.AddValue("title", title.Replace("\n", "&br;"));
                 }
                 if (!string.IsNullOrEmpty(description))
                 {
-                    node.AddValue("description", description.Replace("\n", "\\n"));
+                    node.AddValue("description", description.Replace("\n", "&br;"));
                 }
                 if (!string.IsNullOrEmpty(synopsis))
                 {
-                    node.AddValue("synopsis", synopsis.Replace("\n", "\\n"));
+                    node.AddValue("synopsis", synopsis.Replace("\n", "&br;"));
                 }
                 if (!string.IsNullOrEmpty(completedMessage))
                 {
-                    node.AddValue("completedMessage", completedMessage.Replace("\n", "\\n"));
+                    node.AddValue("completedMessage", completedMessage.Replace("\n", "&br;"));
                 }
                 if (!string.IsNullOrEmpty(notes))
                 {
-                    node.AddValue("notes", notes.Replace("\n", "\\n"));
+                    node.AddValue("notes", notes.Replace("\n", "&br;"));
                 }
                 node.AddValue("hash", hash);
 

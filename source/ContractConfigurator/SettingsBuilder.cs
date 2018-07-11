@@ -17,6 +17,7 @@ namespace ContractConfigurator
         public override GameParameters.GameMode GameMode { get { return GameParameters.GameMode.CAREER; } }
         public override bool HasPresets { get { return false; } }
         public override string Section { get { return "Contract Configurator"; } }
+        public override string DisplaySection { get { return Section; } }
 
         public bool IsEnabled(string name)
         {
@@ -39,7 +40,7 @@ namespace ContractConfigurator
         public bool DisplayOfferedWaypoints = ContractDefs.DisplayOfferedWaypoints;
         public bool DisplayActiveWaypoints = true;
 
-        [GameParameters.CustomFloatParameterUI("Active Contract Multiplier", displayFormat = "F2", minValue = 0.1f, maxValue = 2.0f, stepCount = 20,
+        [GameParameters.CustomFloatParameterUI("Active Contract Multiplier", displayFormat = "F2", minValue = 0.2f, maxValue = 8.0f, stepCount = 40,
             toolTip = "Multiplier applied to the active contract limits.")]
         public float ActiveContractMultiplier = 1.0f;
 

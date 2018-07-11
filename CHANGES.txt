@@ -1,3 +1,73 @@
+Contract Configurator 1.26.0
+- Recompile for KSP 1.4.3
+- Invalid Celestial Bodies constants no longer throw an error on parsing (improves overall support for planet packs that remove/rename planets).
+- Fixed a bug that prevented casting from string to ExperienceTrait.
+
+Contract Configurator 1.25.0
+- Added ExperienceTrait to parser.
+- Kerbal.ExperienceTrait now returns an ExperienceTrait instead of a localised string.
+- Increased max active contract multiplier slider maximum from 2.0 to 8.0.
+- Support for RemoteTech 1.8.10.3 (thanks wraithan).
+
+Contract Configurator 1.24.4
+- More attempts to workaround stock bug.
+
+Contract Configurator 1.24.3
+- Proper fix for last release (thanks Warezcrawler).
+
+Contract Configurator 1.24.2
+- Workaround for stock bug #18267 (contract parameters creating extra messages on completion).
+
+Contract Configurator 1.24.1
+- Recompile against KSP 1.4.2
+- Re-enabled RemoteTech and Kerbal Konstructs integration for KSP 1.4.x.
+- Fix error message when despawning spawned Kerbals (thanks steve_v).
+- Added a warning message when validation errors prevent a DATA_EXPAND node from being parsed (thanks gyf1214).
+- Fixed NRE when checking progress nodes (thanks DocMop).
+- Fixed issue with duplicate assembly warning showing up when it shouldn't (thanks Gordon Dry).
+- Fixed some issues with handling of newlines in config nodes (thanks inigma).
+- Use case insensitive string comparison when loading celestial bodies in saved expressions (thanks gyf214).
+
+Contract Configurator 1.24.0
+- Recompile for KSP 1.4.0
+- Added back MODULE checks in simple version of PartValidation (thanks chrisl).
+- Support RemoteTech 1.8.9 (thanks vader111).
+- Read date/time information from dateTimeFormatter (thanks Aelfhe1m).
+
+Contract Configurator 1.23.3
+- Recompile for KSP 1.3.1
+- Improved display of HasAntenna parameter ratings (thanks Kerbas-ad-astra).
+- Fixed logic for determining contract prestige (thanks sopindm).
+- Fixed previously unlocked parts being re-locked if player tries to buy a science node they don't have sufficient funds for (thanks inigma).
+- Fixed issue using DATA_EXPAND with values that had special characters in them.  Fixes interop issues between CatEye and Other Worlds Planet pack (thanks Chemox).
+
+Contract Configurator 1.23.2
+- Clarified wording of ActiveVesselRangeRequirement for RemoteTech (thanks Alshain).
+- Added check for old usage of partModuleType=Power (thanks muppet9876).
+- Prevent Rendezvous parameter from completing when doing an EVA (thanks pap1723).
+- Don't allow main menu to continue while still loading (prevents issues on slower systems).
+- Made RemoteTech distance function (for coverage system) more generous (thanks NathanKell).
+- Fixed issue with Kerbals spawned at KSC starting an extra ~60 meters in the air (thanks Keniamin).
+- Fixed error when cancelling a contract with spawned Kerbals.
+- Fixed exception with FlyBy and ReturnFromFlyBy requirements.
+- Properly fixed Facility requirement in the tracking station (thanks Kerbas_ad_astra).
+- Fixed NRE from struts breaking (thanks Alshain).
+- Fixed multiple exceptions when using Sigma Binary (thanks Rodger).
+
+Contract Configurator 1.23.1
+- Fixed major bug with VisitWaypoint not properly setting waypoint distances (thanks Keniamin and others).
+- Fixed issue with FacilityRequirement in tracking station (thanks JPLRepo).
+- Fixed issue where some requirement details weren't being saved in contracts.
+- Fixed localisation issue with character names in dialog boxes.
+- Fixed exception when pressing orbit buttons in tracking station (thanks doktorstick).
+
+Contract Configurator 1.23.0
+- Support for KSP 1.3.0
+- Fix issue with contract item sizes not always being set correctly in mission control when switching tabs.
+- Fixed "input is null" error in Docking parameter (thanks linuxgurugamer).
+- Fixed to not generate contracts without parameters (thanks severedsolo).
+- Fixed Sigma Dimensions compatibility issue with atmosphere height (thanks pap1723 and Sigma88).
+
 Contract Configurator 1.22.3
 - Fixed reversed base open/closed requirement text (thanks Keniamin).
 - Add logic to add waypoint icons into Waypoint Manager (happened automatically before KSP 1.2).
