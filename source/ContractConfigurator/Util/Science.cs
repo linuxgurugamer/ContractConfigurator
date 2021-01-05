@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using KSP;
+using KSP.Localization;
 
 namespace ContractConfigurator.Util
 {
@@ -65,12 +66,12 @@ namespace ContractConfigurator.Util
 
             foreach (ConfigNode experimentConfig in experimentConfigs)
             {
-                LoggingUtil.LogDebug(this, "Loading experiment definitions for " + experimentConfig.GetValue("name"));
+                LoggingUtil.LogDebug(this, "Loading experiment definitions for {0}", experimentConfig.GetValue("name"));
 
                 foreach (ConfigNode config in experimentConfig.GetNodes("EXPERIMENT"))
                 {
                     string name = ConfigNodeUtil.ParseValue<string>(config, "name");
-                    LoggingUtil.LogVerbose(this, "    loading experiment " + name);
+                    LoggingUtil.LogVerbose(this, "    loading experiment {0}", name);
 
                     ExperimentRules exp = new ExperimentRules(name);
                     experimentRules[name] = exp;
@@ -96,16 +97,16 @@ namespace ContractConfigurator.Util
                 foreach (ConfigNode config in experimentConfig.GetNodes("MODULE"))
                 {
                     string name = ConfigNodeUtil.ParseValue<string>(config, "name");
-                    LoggingUtil.LogVerbose(this, "    loading module " + name);
+                    LoggingUtil.LogVerbose(this, "    loading module {0}", name);
 
                     experimentModules.Add(name);
                 }
             }
 
-            // Add experiment modules based on class
+            // Add experiment modules based on subclassing
             foreach (Type expModule in ContractConfigurator.GetAllTypes<ModuleScienceExperiment>())
             {
-                LoggingUtil.LogVerbose(this, "    adding module for class " + expModule.Name);
+                LoggingUtil.LogVerbose(this, "    adding module for class {0}", expModule.Name);
                 experimentModules.AddUnique(expModule.Name);
             }
 
@@ -159,6 +160,18 @@ namespace ContractConfigurator.Util
                                     staticName =>
                                         ScienceSubject(experiment, ExperimentSituations.SrfLanded, body, staticName))
                                         : Enumerable.Empty<ScienceSubject>());
+                    }
+                    else if (experiment.id.StartsWith("ROCScience") && biomesFiltered)
+                    {
+                        ROCDefinition roc = ROCManager.Instance.rocDefinitions.Where(r => r.myCelestialBodies.Any(x => x.name == body.name) && experiment.id.Contains(r.type)).FirstOrDefault();
+                        if (roc != null && roc.myCelestialBodies.First().biomes.Where(biomeFilter).Any())
+                        {
+                            return new ScienceSubject[] { ScienceSubject(experiment, sit, body, "") };
+                        }
+                        else
+                        {
+                            return Enumerable.Empty<ScienceSubject>();
+                        }
                     }
                     else if (!biomesFiltered && !difficult)
                     {
@@ -244,8 +257,17 @@ namespace ContractConfigurator.Util
                 return null;
             }
 
-            Match m = Regex.Match(subject.id, @"@([A-Z][\w]+?)([A-Z].*)");
-            string celestialBody = m.Groups[1].Value;
+            string celestialBody;
+            if (subject.id.StartsWith("ROCScience"))
+            {
+                Match m = Regex.Match(subject.id, @"ROCScience_([A-Z][\w]+?)([A-Z].*)");
+                celestialBody = m.Groups[1].Value;
+            }
+            else
+            {
+                Match m = Regex.Match(subject.id, @"@([A-Z][\w]+?)([A-Z].*)");
+                celestialBody = m.Groups[1].Value;
+            }
 
             return string.IsNullOrEmpty(celestialBody) ? null : ConfigNodeUtil.ParseCelestialBodyValue(celestialBody);
         }
@@ -302,6 +324,21 @@ namespace ContractConfigurator.Util
                 return false;
             }
 
+            // Check if experiement is unlocked
+            if (!exp.IsUnlocked())
+            {
+                return false;
+            }
+
+            // Special Breaking Ground logic
+            if (exp.id.StartsWith("ROCScience"))
+            {
+                if (!exp.id.Contains(body.name))
+                {
+                    return false;
+                }
+            }
+
             // Get the experiment rules
             ExperimentRules rules = GetExperimentRules(exp.id);
 
@@ -310,12 +347,12 @@ namespace ContractConfigurator.Util
                 return false;
             }
 
-            if (rules.requireAtmosphere && !body.atmosphere)
+            if ((rules.requireAtmosphere || exp.requireAtmosphere) && !body.atmosphere)
             {
                 return false;
             }
 
-            if (rules.requireNoAtmosphere && body.atmosphere)
+            if ((rules.requireNoAtmosphere || exp.requireNoAtmosphere) && body.atmosphere)
             {
                 return false;
             }
@@ -423,10 +460,10 @@ namespace ContractConfigurator.Util
 
                 // Check the stock experiment
                 foreach (KeyValuePair<AvailablePart, string> pair in PartLoader.Instance.loadedParts.
-                    Where(p => p.moduleInfos.Any(mod => experimentModules.Contains(mod.moduleName.Replace(" ", "")))).
+                    Where(p => p.partConfig != null).
                     SelectMany(p => p.partConfig.GetNodes("MODULE").
                         Where(node => experimentModules.Contains(node.GetValue("name"))).
-                        Select(node => new KeyValuePair<AvailablePart, string>(p, node.GetValue("experimentID")))))
+                        Select(node => new KeyValuePair<AvailablePart, string>(p, node.GetValue("experimentID") ?? node.GetValue("experimentId")))))
                 {
                     if (!string.IsNullOrEmpty(pair.Value))
                     {
@@ -449,6 +486,7 @@ namespace ContractConfigurator.Util
                     string module = rules.partModule;
                     foreach (AvailablePart p in PartLoader.Instance.loadedParts.Where(p => p.moduleInfos.Any(mod => mod.moduleName == module)))
                     {
+                        LoggingUtil.LogVerbose(typeof(Science), "Adding entry for {0} = {1}", rules.id, p.name);
                         experimentParts[rules.id].Add(p);
                     }
                 }
@@ -465,7 +503,6 @@ namespace ContractConfigurator.Util
                     {
                         foreach (AvailablePart p in PartLoader.Instance.loadedParts.Where(p => p.name == pname))
                         {
-                            LoggingUtil.LogVerbose(typeof(Science), "Adding entry for " + rules.id + " = " + p.name);
                             experimentParts[rules.id].Add(p);
                         }
                     }
@@ -480,7 +517,7 @@ namespace ContractConfigurator.Util
 
             // Filter out anything tied to a part that isn't unlocked
             experiments = experiments.Where(exp => partlessExperiments.ContainsKey(exp.id) ||
-                experimentParts.ContainsKey(exp.id) && experimentParts[exp.id].Any(ResearchAndDevelopment.PartTechAvailable));
+                experimentParts.ContainsKey(exp.SummaryID()) && experimentParts[exp.SummaryID()].Any(ResearchAndDevelopment.PartTechAvailable));
 
             return experiments;
         }
@@ -504,7 +541,10 @@ namespace ContractConfigurator.Util
             // Get the experiment rules
             if (!experimentRules.ContainsKey(id))
             {
-                LoggingUtil.LogWarning(typeof(Science), "Experiment '" + id + "' is unknown, assuming a standard experiment.");
+                if (!id.StartsWith("ROCScience_"))
+                {
+                    LoggingUtil.LogWarning(typeof(Science), "Experiment '{0}' is unknown, assuming a standard experiment.", id);
+                }
                 experimentRules[id] = new ExperimentRules(id);
             }
             return experimentRules[id];
@@ -521,19 +561,31 @@ namespace ContractConfigurator.Util
             switch (exp)
             {
                 case ExperimentSituations.FlyingHigh:
-                    return "Flying high";
+                    return Localizer.Format("<<zC:1>>", Localizer.GetStringByTag("#autoLOC_6002003"));
                 case ExperimentSituations.FlyingLow:
-                    return "Flying low";
+                    return Localizer.Format("<<zC:1>>", Localizer.GetStringByTag("#autoLOC_6002002"));
                 case ExperimentSituations.InSpaceHigh:
-                    return "High in space";
+                    return Localizer.GetStringByTag("#cc.science.sit.InSpaceHigh");
                 case ExperimentSituations.InSpaceLow:
-                    return "Low in space";
+                    return Localizer.GetStringByTag("#cc.science.sit.InSpaceLow");
                 case ExperimentSituations.SrfLanded:
-                    return "Landed";
+                    return Localizer.GetStringByTag("#autoLOC_268855");
                 case ExperimentSituations.SrfSplashed:
-                    return "Splashed down";
+                    return Localizer.GetStringByTag("#autoLOC_268858");
                 default:
                     throw new ArgumentException("Unexpected experiment situation: " + exp);
+            }
+        }
+
+        public static string SummaryID(this ScienceExperiment exp)
+        {
+            if (exp.id.StartsWith("ROCScience"))
+            {
+                return "ROCScience";
+            }
+            else
+            {
+                return exp.id;
             }
         }
     }

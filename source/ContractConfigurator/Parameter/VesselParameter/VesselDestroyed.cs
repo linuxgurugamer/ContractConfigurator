@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP;
 using Contracts;
 using Contracts.Parameters;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -34,7 +35,7 @@ namespace ContractConfigurator.Parameters
             string output = "";
             if (string.IsNullOrEmpty(title))
             {
-                output = "Vessel Destroyed";
+                output = Localizer.GetStringByTag("#cc.param.VesselDestroyed");
             }
             else
             {
@@ -77,7 +78,7 @@ namespace ContractConfigurator.Parameters
 
         protected virtual void OnVesselAboutToBeDestroyed(EventReport report)
         {
-            LoggingUtil.LogVerbose(this, "OnVesselAboutToBeDestroyed: " + report.msg);
+            LoggingUtil.LogVerbose(this, "OnVesselAboutToBeDestroyed: {0}", report.msg);
             Vessel v = report.origin.vessel;
             if (v == null)
             {
@@ -102,7 +103,7 @@ namespace ContractConfigurator.Parameters
 
         protected virtual void OnVesselDestroy(Vessel v)
         {
-            LoggingUtil.LogVerbose(this, "OnVesselDestroy: " + (v != null ? v.id.ToString() : "null"));
+            LoggingUtil.LogVerbose(this, "OnVesselDestroy: {0}", (v != null ? v.id.ToString() : "null"));
 
             if (!mustImpactTerrain)
             {

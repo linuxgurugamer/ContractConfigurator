@@ -187,6 +187,38 @@ namespace ContractConfigurator
             return name;
         }
 
+        /// <summary>
+        ///   Gets the full name with the Lingoona gender extension, e.g. "Valentina Kerman^f"
+        /// </summary>
+        public string DisplayName()
+        {
+            return StringBuilderCache.Format("{0}{1}", name, GetLingoonaExtension());
+        }
+
+        /// <summary>
+        ///   Gets the first name with the Lingoona gender extension, e.g. "Jebediah^m"
+        /// </summary>
+        public string FirstName()
+        {
+            return StringBuilderCache.Format("{0}{1}", name.Substring(0, name.IndexOf(' ')), GetLingoonaExtension());
+        }
+
+        /// <summary>
+        ///   Gets the last name with the Lingoona gender extension, e.g. "Kerman^m"
+        /// </summary>
+        public string LastName()
+        {
+            return StringBuilderCache.Format("{0}{1}", name.Substring(name.IndexOf(' ') + 1), GetLingoonaExtension());
+        }
+
+        /// <summary>
+        ///   Gets the Lingoona extension for the gender of the Kerbal.  Ideally, we'd let
+        ///   KSP do this, but we can't count on the Kerbal actually having a ProtoCrewMember
+        ///   all the time, so this seems safer.
+        /// </summary>
+        private string GetLingoonaExtension()
+         => this.gender == ProtoCrewMember.Gender.Female ? "^f" : "^m";
+
         public void Save(ConfigNode node)
         {
             node.AddValue("name", name);
@@ -220,7 +252,7 @@ namespace ContractConfigurator
                 return k;
             }
         }
-
+        
         public static void RemoveKerbal(Kerbal kerbal)
         {
             if (kerbal.pcm != null)
@@ -232,7 +264,7 @@ namespace ContractConfigurator
 
         public static void RemoveKerbal(ProtoCrewMember pcm)
         {
-            LoggingUtil.LogVerbose(typeof(Kerbal), "Removing kerbal " + pcm.name + "...");
+            LoggingUtil.LogVerbose(typeof(Kerbal), "Removing kerbal {0}...", pcm.name);
             Vessel vessel = FlightGlobals.Vessels.Where(v => v.GetVesselCrew().Contains(pcm)).FirstOrDefault();
             if (vessel != null)
             {
@@ -257,7 +289,7 @@ namespace ContractConfigurator
                                 // Everything else
                                 else
                                 {
-                                    LoggingUtil.LogVerbose(typeof(Kerbal), "    Removing " + pcm.name + " from vessel " + vessel.vesselName);
+                                    LoggingUtil.LogVerbose(typeof(Kerbal), "    Removing {0} from vessel {1}", pcm.name, vessel.vesselName);
                                     p.RemoveCrewmember(pcm);
                                 }
                                 break;
@@ -278,7 +310,7 @@ namespace ContractConfigurator
                                 // Everything else
                                 else
                                 {
-                                    LoggingUtil.LogVerbose(typeof(Kerbal), "    Removing " + pcm.name + " from vessel " + vessel.vesselName);
+                                    LoggingUtil.LogVerbose(typeof(Kerbal), "    Removing {0} from vessel {1}", pcm.name, vessel.vesselName);
                                     pps.RemoveCrew(pcm);
                                 }
                                 break;

@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP;
 using Contracts;
 using Contracts.Parameters;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -31,7 +32,7 @@ namespace ContractConfigurator.Parameters
             string output;
             if (string.IsNullOrEmpty(title))
             {
-                output = "Plant a flag on " + targetBody.CleanDisplayName(true);
+                output = Localizer.Format("#autoLOC_284213", targetBody.displayName);
             }
             else
             {
@@ -84,7 +85,7 @@ namespace ContractConfigurator.Parameters
         /// <returns>Whether the vessel meets the condition</returns>
         protected override bool VesselMeetsCondition(Vessel vessel)
         {
-            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: " + vessel.id);
+            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: {0}", vessel.id);
 
             return GetStateForVessel(vessel) == ParameterState.Complete;
         }

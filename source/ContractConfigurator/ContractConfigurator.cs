@@ -7,9 +7,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using KSP;
+using KSP.Localization;
 using KSP.UI.Screens;
 using Contracts;
-using FinePrint;
 using ContractConfigurator.Util;
 
 namespace ContractConfigurator
@@ -43,6 +43,8 @@ namespace ContractConfigurator
 
         public static EventData<Contract, ContractParameter> OnParameterChange = new EventData<Contract, ContractParameter>("OnParameterChange");
 
+        public static Dictionary<string, Type> contractTypeMap = new Dictionary<string, Type>();
+
         void Start()
         {
             DontDestroyOnLoad(this);
@@ -52,14 +54,12 @@ namespace ContractConfigurator
 
             OnParameterChange.Add(new EventData<Contract, ContractParameter>.OnEvent(ParameterChange));
             GameEvents.OnTechnologyResearched.Add(new EventData<GameEvents.HostTargetAction<RDTech, RDTech.OperationResult>>.OnEvent(OnTechResearched));
-            GameEvents.Contract.onParameterChange.Add(new EventData<Contract, ContractParameter>.OnEvent(StockOnParameterChange));
         }
 
         void Destroy()
         {
             OnParameterChange.Remove(new EventData<Contract, ContractParameter>.OnEvent(ParameterChange));
             GameEvents.OnTechnologyResearched.Remove(new EventData<GameEvents.HostTargetAction<RDTech, RDTech.OperationResult>>.OnEvent(OnTechResearched));
-            GameEvents.Contract.onParameterChange.Remove(new EventData<Contract, ContractParameter>.OnEvent(StockOnParameterChange));
         }
 
         void PSystemReady()
@@ -67,13 +67,16 @@ namespace ContractConfigurator
             // Log version info
             var ainfoV = Attribute.GetCustomAttribute(typeof(ContractConfigurator).Assembly,
                     typeof(AssemblyInformationalVersionAttribute)) as AssemblyInformationalVersionAttribute;
-            LoggingUtil.LogInfo(this, "Contract Configurator " + ainfoV.InformationalVersion + " loading...");
+            LoggingUtil.LogInfo(this, "Contract Configurator {0} loading...", ainfoV.InformationalVersion);
 
             LoggingUtil.LoadDebuggingConfig();
 
             RegisterParameterFactories();
             RegisterBehaviourFactories();
             RegisterContractRequirements();
+
+            LoadTypeInfo();
+
             IEnumerator<YieldInstruction> iterator = LoadGroupConfig();
             while (iterator.MoveNext()) { }
             DebugWindow.LoadTextures();
@@ -130,23 +133,6 @@ namespace ContractConfigurator
             GameEvents.Contract.onParameterChange.Fire(c, p);
         }
 
-        void StockOnParameterChange(Contract c, ContractParameter p)
-        {
-            // Workaround for stock bug #18267
-            if (p.State == ParameterState.Complete && p.FundsCompletion == 0 && p.ScienceCompletion == 0 && p.ReputationCompletion == 0)
-            {
-                Versioning v = Versioning.Instance as Versioning;
-                if (v.versionMajor == 1 && v.versionMinor == 4 && v.revision == 2)
-                {
-                    MessageSystem.Message message = MessageSystem.Instance.FindMessages(m => m.message.Contains(p.MessageComplete)).FirstOrDefault();
-                    if (message != null)
-                    {
-                        MessageSystem.Instance.DiscardMessage(message.button);
-                    }
-                }
-            }
-        }
-
         public void OnGUI()
         {
             DebugWindow.OnGUI();
@@ -190,7 +176,7 @@ namespace ContractConfigurator
             if (allMM.Count() > 0)
             {
                 Assembly mmAssembly = allMM.First().assembly;
-                LoggingUtil.LogVerbose(this, "Reloading config using ModuleManager: " + mmAssembly.FullName);
+                LoggingUtil.LogVerbose(this, "Reloading config using ModuleManager: {0}", mmAssembly.FullName);
 
                 // Get the module manager object
                 Type mmPatchType = mmAssembly.GetType("ModuleManager.MMPatchLoader");
@@ -260,7 +246,7 @@ namespace ContractConfigurator
                 }
                 catch (Exception e)
                 {
-                    LoggingUtil.LogError(this, "Error registering parameter factory " + subclass.Name);
+                    LoggingUtil.LogError(this, "Error registering parameter factory {0}", subclass.Name);
                     LoggingUtil.LogException(e);
                 }
             }
@@ -290,7 +276,7 @@ namespace ContractConfigurator
                 }
                 catch (Exception e)
                 {
-                    LoggingUtil.LogError(this, "Error registering behaviour factory " + subclass.Name);
+                    LoggingUtil.LogError(this, "Error registering behaviour factory {0}", subclass.Name);
                     LoggingUtil.LogException(e);
                 }
             }
@@ -320,12 +306,21 @@ namespace ContractConfigurator
                 }
                 catch (Exception e)
                 {
-                    LoggingUtil.LogError(this, "Error registering contract requirement " + subclass.Name);
+                    LoggingUtil.LogError(this, "Error registering contract requirement {0}", subclass.Name);
                     LoggingUtil.LogException(e);
                 }
             }
 
             LoggingUtil.LogInfo(this, "Finished Registering ContractRequirements");
+        }
+
+        private void LoadTypeInfo()
+        {
+            contractTypeMap.Clear();
+            foreach (Type t in ContractConfigurator.GetAllTypes<Contract>())
+            {
+                contractTypeMap[t.Name] = t;
+            }
         }
 
         /// <summary>
@@ -368,7 +363,7 @@ namespace ContractConfigurator
             {
                 // Create the group
                 string name = groupConfig.GetValue("name");
-                LoggingUtil.LogInfo(this, "Loading CONTRACT_GROUP: '" + name + "'");
+                LoggingUtil.LogInfo(this, "Loading CONTRACT_GROUP: '{0}'", name);
                 ContractGroup contractGroup = null;
                 try
                 {
@@ -376,7 +371,7 @@ namespace ContractConfigurator
                 }
                 catch (ArgumentException)
                 {
-                    LoggingUtil.LogError(this, "Couldn't load CONTRACT_GROUP '" + name + "' due to a duplicate name.");
+                    LoggingUtil.LogError(this, "Couldn't load CONTRACT_GROUP '{0}' due to a duplicate name.", name);
                 }
 
                 // Peform the actual load
@@ -431,7 +426,7 @@ namespace ContractConfigurator
 
             var ainfoV = Attribute.GetCustomAttribute(typeof(ContractConfigurator).Assembly,
                     typeof(AssemblyInformationalVersionAttribute)) as AssemblyInformationalVersionAttribute;
-            LoggingUtil.LogInfo(this, "Contract Configurator " + ainfoV.InformationalVersion + " finished loading.");
+            LoggingUtil.LogInfo(this, "Contract Configurator {0} finished loading.", ainfoV.InformationalVersion);
         }
 
         /// <summary>
@@ -447,14 +442,14 @@ namespace ContractConfigurator
             foreach (ConfigNode contractConfig in contractConfigs)
             {
                 // Create the initial contract type
-                LoggingUtil.LogVerbose(this, "Pre-load for node: '" + contractConfig.GetValue("name") + "'");
+                LoggingUtil.LogVerbose(this, "Pre-load for node: '{0}'", contractConfig.GetValue("name"));
                 try
                 {
                     ContractType contractType = new ContractType(contractConfig.GetValue("name"));
                 }
                 catch (ArgumentException)
                 {
-                    LoggingUtil.LogError(this, "Couldn't load CONTRACT_TYPE '" + contractConfig.GetValue("name") + "' due to a duplicate name.");
+                    LoggingUtil.LogError(this, "Couldn't load CONTRACT_TYPE '{0}' due to a duplicate name.", contractConfig.GetValue("name"));
                 }
             }
 
@@ -488,7 +483,7 @@ namespace ContractConfigurator
                 }
             }
 
-            LoggingUtil.LogInfo(this, "Loaded " + successContracts + " out of " + totalContracts + " CONTRACT_TYPE nodes.");
+            LoggingUtil.LogInfo(this, "Loaded {0} out of {1} CONTRACT_TYPE nodes.", successContracts, totalContracts);
 
             // Check for empty groups and warn
             foreach (ContractGroup group in ContractGroup.contractGroups.Values.Where(g => g != null))
@@ -522,7 +517,7 @@ namespace ContractConfigurator
                     // Only log once
                     if (!badAssemblies.Contains(assembly))
                     {
-                        LoggingUtil.LogException(new Exception("Error loading types from assembly " + assembly.FullName, e));
+                        LoggingUtil.LogException(new Exception(StringBuilderCache.Format("Error loading types from assembly {0}", assembly.FullName), e));
                         badAssemblies.Add(assembly);
                     }
                     continue;

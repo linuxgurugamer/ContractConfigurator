@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP;
 using Contracts;
 using Contracts.Parameters;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -14,7 +15,6 @@ namespace ContractConfigurator.Parameters
     /// </summary>
     public class VesselParameterGroup : ContractConfiguratorParameter, ParameterDelegateContainer
     {
-        private const string notePrefix = "<#acfcff>[-] Note: ";
         protected string define { get; set; }
         protected string defineList { get; set; }
         protected List<string> vesselList { get; set; }
@@ -72,53 +72,40 @@ namespace ContractConfigurator.Parameters
             else
             {
                 // Set the vessel name
-                output = "Vessel: ";
                 if ((waiting || state == ParameterState.Complete) && trackedVessel != null)
                 {
-                    output += trackedVessel.vesselName;
+                    output = Localizer.Format("#cc.param.VesselParameterGroup.default", trackedVessel.vesselName);
                 }
                 else if (!string.IsNullOrEmpty(define))
                 {
-                    output += define + " (new)";
+                    output = Localizer.Format("#cc.param.VesselParameterGroup.newVessel", define);
                 }
                 else if (vesselList.Any())
                 {
-                    bool first = true;
-                    foreach (string vesselName in vesselList)
-                    {
-                        if (!first)
+                    output = Localizer.Format("#cc.param.VesselParameterGroup.default",
+                        LocalizationUtil.LocalizeList<string>(LocalizationUtil.Conjunction.OR, vesselList.AsEnumerable(), vesselName =>
                         {
-                            output += " OR ";
+                            if (ContractVesselTracker.Instance != null)
+                            {
+                                return ContractVesselTracker.GetDisplayName(vesselName);
+                            }
+                            else
+                            {
+                                LoggingUtil.LogWarning(this, "Unable to get vessel display name for '{0}' - ContractVesselTracker is null.  This is likely caused by another ScenarioModule crashing, preventing others from loading.", vesselName);
+                                return vesselName;
+                            }
                         }
-                        if (ContractVesselTracker.Instance != null)
-                        {
-                            output += ContractVesselTracker.GetDisplayName(vesselName);
-                        }
-                        else
-                        {
-                            LoggingUtil.LogWarning(this, "Unable to get vessel display name for '" + vesselName + "' - ContractVesselTracker is null.  This is likely caused by another ScenarioModule crashing, preventing others from loading.");
-                            output += vesselName;
-                        }
-                        first = false;
-                    }
+                    ));
                 }
                 else
                 {
-                    output += "Any";
+                    output = Localizer.GetStringByTag("#cc.param.VesselParameterGroup.anyVessel");
                 }
-            }
 
-            // If we're complete and a custom title hasn't been provided, try to get a better title
-            if (state == ParameterState.Complete && string.IsNullOrEmpty(title))
-            {
-                if (ParameterCount == 1)
+                // If we're complete and a custom title hasn't been provided, try to get a better title
+                if (state == ParameterState.Complete && ParameterCount == 1 && trackedVessel != null)
                 {
-                    output = "";
-                    if (trackedVessel != null)
-                    {
-                        output += "Vessel: " + trackedVessel.vesselName + ": ";
-                    }
-                    output += GetParameter(0).Title;
+                    output = Localizer.Format("#cc.param.VesselParameterGroup.complete", trackedVessel.vesselName, GetParameter(0).Title);
                 }
             }
 
@@ -131,15 +118,15 @@ namespace ContractConfigurator.Parameters
             {
                 if (trackedVessel == null)
                 {
-                    return "No vessel currently matching parameters.";
+                    return Localizer.GetStringByTag("#cc.param.VesselParameterGroup.notes.noVessel");
                 }
                 else if (!waiting)
                 {
-                    return "Active Vessel:";
+                    return Localizer.GetStringByTag("#cc.param.VesselParameterGroup.notes.activeVessel");
                 }
                 else
                 {
-                    return "Waiting for completion time for " + trackedVessel.vesselName + ".";
+                    return Localizer.Format("#cc.param.VesselParameterGroup.notes.waitingVessel", trackedVessel.vesselName);
                 }
             }
 
@@ -158,7 +145,8 @@ namespace ContractConfigurator.Parameters
         {
             if (duration > 0.0)
             {
-                durationParameter = new ParameterDelegate<Vessel>("Duration: " + DurationUtil.StringValue(duration),
+                durationParameter = new ParameterDelegate<Vessel>(
+                    Localizer.Format("#cc.param.VesselParameterGroup.duration", DurationUtil.StringValue(duration)),
                     v => false);
                 durationParameter.Optional = true;
                 durationParameter.fakeOptional = true;
@@ -173,12 +161,13 @@ namespace ContractConfigurator.Parameters
             {
                 if (vesselList.Count() == 1)
                 {
-                    vesselListParam = new ParameterDelegate<Vessel>(hideVesselName ? "" : "Vessel: " + ContractVesselTracker.GetDisplayName(vesselList.First()), v =>
+                    vesselListParam = new ParameterDelegate<Vessel>(hideVesselName ? "" : Localizer.Format("#cc.param.VesselParameterGroup.default", ContractVesselTracker.GetDisplayName(vesselList.First())), v =>
                     {
                         bool check = VesselCanBeConsidered(v);
                         if (!hideVesselName)
                         {
-                            vesselListParam.SetTitle((FlightGlobals.ActiveVessel == v && trackedVessel != null ? "" : "Tracked ") + "Vessel: " + ContractVesselTracker.GetDisplayName(vesselList.First()));
+                            vesselListParam.SetTitle(Localizer.Format((FlightGlobals.ActiveVessel == v && trackedVessel != null ? "#cc.param.VesselParameterGroup.default" : "#cc.param.VesselParameterGroup.trackedVessel"),
+                                ContractVesselTracker.GetDisplayName(vesselList.First())));
                         }
                         return check;
                     });
@@ -189,12 +178,19 @@ namespace ContractConfigurator.Parameters
                 }
                 else
                 {
-                    vesselListParam = new ParameterDelegate<Vessel>(hideVesselName ? "" : "Vessel: Any of the following:", v =>
+                    vesselListParam = new ParameterDelegate<Vessel>(hideVesselName ? "" : Localizer.GetStringByTag("#cc.param.VesselParameterGroup.anyVesselListEmpty"), v =>
                     {
                         bool check = VesselCanBeConsidered(v);
                         if (!hideVesselName)
                         {
-                            vesselListParam.SetTitle("Vessel: Any of the following:" + (check ? " " + ParameterDelegate<Vessel>.GetDelegateText(vesselListParam) : ""));
+                            if (check)
+                            {
+                                vesselListParam.SetTitle(Localizer.Format("#cc.param.VesselParameterGroup.anyVesselList", ParameterDelegate<Vessel>.GetDelegateText(vesselListParam)));
+                            }
+                            else
+                            {
+                                Localizer.GetStringByTag("#cc.param.VesselParameterGroup.anyVesselListEmpty");
+                            }
                         }
                         return check;
                     });
@@ -223,7 +219,7 @@ namespace ContractConfigurator.Parameters
                 return;
             }
 
-            LoggingUtil.LogVerbose(this, "-> UpdateState(" + (vessel != null ? vessel.id.ToString() : "null") + ")");
+            LoggingUtil.LogVerbose(this, "-> UpdateState({0})", (vessel != null ? vessel.id.ToString() : "null"));
 
             // If this vessel doesn't match our list of valid vessels, ignore the update
             if (!VesselCanBeConsidered(vessel))
@@ -470,7 +466,7 @@ namespace ContractConfigurator.Parameters
             {
                 if (dissassociateVesselsOnContractCompletion && !string.IsNullOrEmpty(define) && trackedVessel != null)
                 {
-                    LoggingUtil.LogVerbose(this, "Removing defined vessel " + define);
+                    LoggingUtil.LogVerbose(this, "Removing defined vessel {0}", define);
                 }
 
                 if (!string.IsNullOrEmpty(defineList) && trackedVessel != null)
@@ -491,7 +487,7 @@ namespace ContractConfigurator.Parameters
         {
             if (c == Root && dissassociateVesselsOnContractFailure && !string.IsNullOrEmpty(define) && trackedVessel != null)
             {
-                LoggingUtil.LogVerbose(this, "Removing defined vessel " + define);
+                LoggingUtil.LogVerbose(this, "Removing defined vessel {0}", define);
                 ContractVesselTracker.Instance.AssociateVessel(define, null);
             }
         }
@@ -552,7 +548,7 @@ namespace ContractConfigurator.Parameters
 
         protected void OnVesselChange(Vessel vessel)
         {
-            LoggingUtil.LogVerbose(this, "OnVesselChange(" + (vessel != null && vessel.id != null ? vessel.id.ToString() : "null") + "), Active = " +
+            LoggingUtil.LogVerbose(this, "OnVesselChange({0}), Active = ", (vessel != null && vessel.id != null ? vessel.id.ToString() : "null"),
                 (FlightGlobals.ActiveVessel != null && FlightGlobals.ActiveVessel.id != null ? FlightGlobals.ActiveVessel.id.ToString() : "null"));
             UpdateState(vessel);
         }
@@ -565,7 +561,7 @@ namespace ContractConfigurator.Parameters
                 LoggingUtil.LogVerbose(this, "OnParameterStateChange");
                 if (AllChildParametersComplete())
                 {
-                    LoggingUtil.LogVerbose(this, "    AllChildParametersComplete (waiting = " + waiting + ")");
+                    LoggingUtil.LogVerbose(this, "    AllChildParametersComplete (waiting = {0})", waiting);
                     if (!waiting && trackedVessel != null)
                     {
                         LoggingUtil.LogVerbose(this, "    set waiting");
@@ -575,7 +571,7 @@ namespace ContractConfigurator.Parameters
                         // Set the tracked vessel association
                         if (!string.IsNullOrEmpty(define))
                         {
-                            LoggingUtil.LogVerbose(this, "setting " + define + " as " + trackedVessel.vesselName);
+                            LoggingUtil.LogVerbose(this, "setting {0} as {1}", define, trackedVessel.vesselName);
                             ContractVesselTracker.Instance.AssociateVessel(define, trackedVessel);
                         }
                     }
@@ -592,7 +588,7 @@ namespace ContractConfigurator.Parameters
                     // Set the tracked vessel association
                     if (!string.IsNullOrEmpty(define))
                     {
-                        LoggingUtil.LogVerbose(this, "setting " + define + " as null");
+                        LoggingUtil.LogVerbose(this, "setting {0} as null", define);
                         ContractVesselTracker.Instance.AssociateVessel(define, null);
                     }
 
@@ -634,7 +630,7 @@ namespace ContractConfigurator.Parameters
 
                     if (durationParameter != null)
                     {
-                        durationParameter.SetTitle("Time Remaining: " + DurationUtil.StringValue(completionTime - Planetarium.GetUniversalTime()));
+                        durationParameter.SetTitle(Localizer.Format("#cc.param.VesselParameterGroup.time", DurationUtil.StringValue(completionTime - Planetarium.GetUniversalTime())));
                     }
                 }
             }
@@ -642,7 +638,7 @@ namespace ContractConfigurator.Parameters
             {
                 if (durationParameter != null)
                 {
-                    durationParameter.SetTitle("Duration: " + DurationUtil.StringValue(duration));
+                    durationParameter.SetTitle(Localizer.Format("#cc.param.VesselParameterGroup.duration", DurationUtil.StringValue(duration)));
                 }
             }
         }

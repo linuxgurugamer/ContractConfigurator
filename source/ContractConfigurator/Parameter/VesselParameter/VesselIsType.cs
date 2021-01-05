@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP;
 using Contracts;
 using Contracts.Parameters;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -33,7 +34,7 @@ namespace ContractConfigurator.Parameters
             string output = "";
             if (string.IsNullOrEmpty(title))
             {
-                output = "Vessel type: " + vesselType;
+                output = Localizer.Format("#cc.param.VesselIsType", vesselType.displayDescription());
             }
             else
             {
@@ -103,7 +104,7 @@ namespace ContractConfigurator.Parameters
         /// <returns>Whether the vessel meets the condition</returns>
         protected override bool VesselMeetsCondition(Vessel vessel)
         {
-            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: " + vessel.id);
+            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: {0}", vessel.id);
             return vessel.vesselType == vesselType;
         }
     }

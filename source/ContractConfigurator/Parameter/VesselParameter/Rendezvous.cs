@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP;
 using Contracts;
 using Contracts.Parameters;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -43,27 +44,11 @@ namespace ContractConfigurator.Parameters
             {
                 if (Parent is VesselParameterGroup)
                 {
-                    output = "Rendezvous with: ";
-                    if (vessels.Count > 0)
-                    {
-                        output += ContractVesselTracker.GetDisplayName(vessels[0]);
-                    }
-                    else
-                    {
-                        output += "Any vessel";
-                    }
+                    output = Localizer.Format("#cc.param.Rendezvous.1", vessels.Count > 0 ? ContractVesselTracker.GetDisplayName(vessels[0]) : Localizer.GetStringByTag("#cc.param.vessel.Any"));
                 }
                 else
                 {
-                    output = "Rendezvous: " + ContractVesselTracker.GetDisplayName(vessels[0]) + " and ";
-                    if (vessels.Count > 1)
-                    {
-                        output += ContractVesselTracker.GetDisplayName(vessels[1]);
-                    }
-                    else
-                    {
-                        output += "any vessel";
-                    }
+                    output = Localizer.Format("#cc.param.Rendezvous.2", ContractVesselTracker.GetDisplayName(vessels[0]), vessels.Count > 1 ? ContractVesselTracker.GetDisplayName(vessels[1]) : Localizer.GetStringByTag("#cc.param.vessel.any"));
                 }
             }
             else
@@ -146,8 +131,8 @@ namespace ContractConfigurator.Parameters
                     }
                 }
 
-                LoggingUtil.LogVerbose(this, "v1 = " + (v1 == null ? "null" : v1.id.ToString()));
-                LoggingUtil.LogVerbose(this, "v2 = " + (v2 == null ? "null" : v2.id.ToString()));
+                LoggingUtil.LogVerbose(this, "v1 = {0}", (v1 == null ? "null" : v1.id.ToString()));
+                LoggingUtil.LogVerbose(this, "v2 = {0}", (v2 == null ? "null" : v2.id.ToString()));
 
                 if (v1 == null)
                 {
@@ -199,7 +184,7 @@ namespace ContractConfigurator.Parameters
         /// <returns>Whether the vessel meets the condition</returns>
         protected override bool VesselMeetsCondition(Vessel vessel)
         {
-            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: " + vessel.id);
+            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: {0}", vessel.id);
             return GetState(vessel) == ParameterState.Complete;
         }
     }

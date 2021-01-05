@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP;
 using KSPAchievements;
 using ContractConfigurator.Util;
+using KSP.Localization;
 
 namespace ContractConfigurator
 {
@@ -14,6 +15,14 @@ namespace ContractConfigurator
     /// </summary>
     public class AllRequirement : ContractRequirement
     {
+        public override bool LoadFromConfig(ConfigNode configNode)
+        {
+            // Load base class
+            bool valid = base.LoadFromConfig(configNode);
+
+            return valid;
+        }
+
         public override bool RequirementMet(ConfiguredContract contract)
         {
             bool requirementMet = true;
@@ -32,7 +41,7 @@ namespace ContractConfigurator
 
         protected override string RequirementText()
         {
-            return "Must meet <color=#" + MissionControlUI.RequirementHighlightColor + ">all</color> of the following";
+            return Localizer.Format(invertRequirement ? "#cc.req.All.x" : "#cc.req.All", MissionControlUI.RequirementHighlightColor);
         }
     }
 }

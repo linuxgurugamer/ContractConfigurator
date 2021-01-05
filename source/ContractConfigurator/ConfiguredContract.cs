@@ -208,7 +208,7 @@ namespace ContractConfigurator
                     LoggingUtil.logLevel = LoggingUtil.LogLevel.VERBOSE;
                 }
 
-                LoggingUtil.LogDebug(this, "Initializing contract: " + contractType);
+                LoggingUtil.LogDebug(this, "Initializing contract: {0}", contractType);
 
                 // Set stuff from contract type
                 subType = contractType.name;
@@ -218,7 +218,7 @@ namespace ContractConfigurator
                 // Set the contract expiry
                 if (contractType.maxExpiry == 0.0f)
                 {
-                    LoggingUtil.LogDebug(this, contractType.name + ": Setting expirty to none");
+                    LoggingUtil.LogDebug(this, "{0}: Setting expirty to none", contractType.name);
                     SetExpiry();
                     expiryType = DeadlineType.None;
                 }
@@ -307,15 +307,18 @@ namespace ContractConfigurator
                 requirements = new List<ContractRequirement>();
                 foreach (ContractRequirement requirement in contractType.Requirements)
                 {
-                    requirements.Add(requirement);
+                    ConfigNode serializedRequirement = new ConfigNode();
+                    requirement.Save(serializedRequirement);
+                    ContractRequirement copy = ContractRequirement.LoadRequirement(serializedRequirement);
+                    requirements.Add(copy);
                 }
 
-                LoggingUtil.LogDebug(this, "Initialized contract: " + contractType);
+                LoggingUtil.LogDebug(this, "Initialized contract: {0}", contractType);
                 return true;
             }
             catch (Exception e)
             {
-                LoggingUtil.LogError(this, "Error initializing contract " + contractType);
+                LoggingUtil.LogError(this, "Error initializing contract {0}", contractType);
                 LoggingUtil.LogException(e);
                 ExceptionLogWindow.DisplayFatalException(ExceptionLogWindow.ExceptionSituation.CONTRACT_GENERATION, e,
                     contractType == null ? "unknown" : contractType.FullName);
@@ -349,10 +352,11 @@ namespace ContractConfigurator
             }
             catch (Exception e)
             {
-                LoggingUtil.LogError(this, "Error generating contract!");
+                string contractTypeName = contractType == null ? "<unknown contract type>" : contractType.FullName;
+                LoggingUtil.LogError(this, "Error generating contract {0}!", contractTypeName);
                 LoggingUtil.LogException(e);
                 ExceptionLogWindow.DisplayFatalException(ExceptionLogWindow.ExceptionSituation.CONTRACT_GENERATION, e,
-                    contractType == null ? "unknown" : contractType.FullName);
+                    contractTypeName);
 
                 try
                 {
@@ -476,8 +480,7 @@ namespace ContractConfigurator
                 // If the contract type is null, then it likely means that it was uninstalled
                 if (contractType == null)
                 {
-                    LoggingUtil.LogWarning(this, "Error loading contract for contract type '" + subType +
-                        "'.  The contract type either failed to load or was uninstalled.");
+                    LoggingUtil.LogWarning(this, "Error loading contract for contract type '{0}'.  The contract type either failed to load or was uninstalled.", subType);
                     try
                     {
                         if (ContractState == State.Active || ContractState == State.Offered)
@@ -494,7 +497,7 @@ namespace ContractConfigurator
             catch (Exception e)
             {
                 LoggingUtil.LogError(this, "Error loading contract from persistance file!");
-                LoggingUtil.LogException(e);
+                LoggingUtil.LogException(new ContractConfiguratorException(this, e));
                 ExceptionLogWindow.DisplayFatalException(ExceptionLogWindow.ExceptionSituation.CONTRACT_LOAD, e, this);
 
                 try
@@ -582,7 +585,7 @@ namespace ContractConfigurator
             }
             catch (Exception e)
             {
-                LoggingUtil.LogError(this, "Error saving contract '" + subType + "' to persistance file!");
+                LoggingUtil.LogError(this, "Error saving contract '{0}' to persistance file!", subType);
                 LoggingUtil.LogException(e);
                 ExceptionLogWindow.DisplayFatalException(ExceptionLogWindow.ExceptionSituation.CONTRACT_SAVE, e, this);
 
@@ -598,7 +601,7 @@ namespace ContractConfigurator
                 bool meets = contractType.MeetRequirements(this, contractType);
                 if (ContractState == State.Active && !meets)
                 {
-                    LoggingUtil.LogWarning(this, "Removed contract '" + title + "', as it no longer meets the requirements.");
+                    LoggingUtil.LogWarning(this, "Removed contract '{0}', as it no longer meets the requirements.", title);
                 }
                 return meets;
             }

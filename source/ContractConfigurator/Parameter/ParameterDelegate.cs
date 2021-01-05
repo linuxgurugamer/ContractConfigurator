@@ -7,6 +7,7 @@ using UnityEngine;
 using KSP;
 using Contracts;
 using Contracts.Parameters;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -35,13 +36,12 @@ namespace ContractConfigurator.Parameters
             switch (type)
             {
                 case ParameterDelegateMatchType.FILTER:
-                    return "With ";
                 case ParameterDelegateMatchType.VALIDATE:
-                    return "With ";
+                    return Localizer.GetStringByTag("#cc.param.ParameterDelegate.MatchExtension.validate");
                 case ParameterDelegateMatchType.VALIDATE_ALL:
-                    return "All have ";
+                    return Localizer.GetStringByTag("#cc.param.ParameterDelegate.MatchExtension.all");
                 case ParameterDelegateMatchType.NONE:
-                    return "None have ";
+                    return Localizer.GetStringByTag("#cc.param.ParameterDelegate.MatchExtension.none");
             }
             return null;
         }
@@ -59,6 +59,7 @@ namespace ContractConfigurator.Parameters
         protected bool trivial;
         protected BitArray src = new BitArray(32);
         protected BitArray dest = new BitArray(32);
+        protected string origTitle;
 
         public ParameterDelegate()
             : this(null, null, false)
@@ -73,7 +74,7 @@ namespace ContractConfigurator.Parameters
         public ParameterDelegate(string title, Func<T, bool> filterFunc, bool trivial, ParameterDelegateMatchType matchType = ParameterDelegateMatchType.FILTER)
             : base(title)
         {
-            this.id = title;
+            this.origTitle = title;
             this.filterFunc = filterFunc;
             this.matchType = matchType;
             this.trivial = trivial;
@@ -114,7 +115,7 @@ namespace ContractConfigurator.Parameters
 
         public void ResetTitle()
         {
-            title = id;
+            title = origTitle;
         }
 
         public void SetTitle(string newTitle)
@@ -300,12 +301,12 @@ namespace ContractConfigurator.Parameters
                 ParameterDelegate<T> paramDelegate = param[i] as ParameterDelegate<T>;
                 if (paramDelegate != null)
                 {
-                    LoggingUtil.LogVerbose(paramDelegate, "Checking condition for '" + paramDelegate.title + "', conditionMet = " + conditionMet);
+                    LoggingUtil.LogVerbose(paramDelegate, "Checking condition for '{0}', conditionMet = {1}", paramDelegate.title, conditionMet);
 
                     paramDelegate.InitializeBitArrays(values, current);
                     paramDelegate.SetState(values, ref conditionMet, checkOnly);
 
-                    LoggingUtil.LogVerbose(paramDelegate, "  after, conditionMet = " + conditionMet);
+                    LoggingUtil.LogVerbose(paramDelegate, "  after, conditionMet = {0}", conditionMet);
 
                     if (paramDelegate.matchType == ParameterDelegateMatchType.FILTER)
                     {
@@ -364,24 +365,25 @@ namespace ContractConfigurator.Parameters
         /// <returns>The full delegate string</returns>
         public static string GetDelegateText(ContractParameter param)
         {
-            string output = "";
+            StringBuilder sb = StringBuilderCache.Acquire();
             foreach (ContractParameter child in param.GetChildren())
             {
                 if (child is ParameterDelegate<T> && !((ParameterDelegate<T>)child).trivial)
                 {
-                    if (!string.IsNullOrEmpty(output))
+                    if (sb.Length != 0)
                     {
-                        output += "; ";
+                        sb.Append("; ");
                     }
-                    output += ((ParameterDelegate<T>)child).title;
+                    sb.Append(((ParameterDelegate<T>)child).title);
 
                     if (child is AllParameterDelegate<T>)
                     {
-                        output += ": " + GetDelegateText(child);
+                        sb.Append(": ");
+                        sb.Append(GetDelegateText(child));
                     }
                 }
             }
-            return output;
+            return sb.ToStringAndRelease();
         }
     }
     
@@ -404,14 +406,14 @@ namespace ContractConfigurator.Parameters
 
         protected override string GetParameterTitle()
         {
-            string title = base.GetParameterTitle();
-
             if (state != ParameterState.Incomplete)
             {
-                title += ": " + ParameterDelegate<T>.GetDelegateText(this);
+                return StringBuilderCache.Format("{0}: {1}", base.GetParameterTitle(), ParameterDelegate<T>.GetDelegateText(this));
             }
-
-            return title;
+            else
+            {
+                return base.GetParameterTitle();
+            }
         }
 
         protected override void SetState(IEnumerable<T> values, ref bool conditionMet, bool checkOnly = false)
@@ -454,28 +456,39 @@ namespace ContractConfigurator.Parameters
             this.maxCount = maxCount;
             this.ignorePreviousFailures = ignorePreviousFailures;
 
-            title = filterFunc == DefaultFilter ? "Count: " : "";
+            StringBuilder sb = StringBuilderCache.Acquire();
+            if (filterFunc == DefaultFilter)
+            {
+                sb.Append(Localizer.GetStringByTag("#cc.param.count"));
+                sb.Append(" ");
+            }
+
             if (maxCount == 0)
             {
-                title += filterFunc == DefaultFilter && string.IsNullOrEmpty(extraTitle) ? "None" : "No";
+                sb.Append(filterFunc == DefaultFilter && string.IsNullOrEmpty(extraTitle) ? Localizer.GetStringByTag("#cc.param.count.none") : Localizer.GetStringByTag("#cc.param.count.no"));
             }
             else if (maxCount == int.MaxValue)
             {
-                title += "At least " + minCount;
+                sb.Append(Localizer.Format("#cc.param.count.atLeast", minCount));
             }
             else if (minCount == 0)
             {
-                title += "At most " + maxCount;
+                sb.Append(Localizer.Format("#cc.param.count.atMost", maxCount));
             }
             else if (minCount == maxCount)
             {
-                title += "Exactly " + minCount;
+                sb.Append(Localizer.Format("#cc.param.count.exact", minCount));
             }
             else
             {
-                title += "Between " + minCount + " and " + maxCount;
+                sb.Append(Localizer.Format("#cc.param.count.between", minCount, maxCount));
             }
-            title += " " + extraTitle;
+            if (!string.IsNullOrEmpty(extraTitle))
+            {
+                sb.Append(" ");
+                sb.Append(extraTitle);
+            }
+            title = sb.ToStringAndRelease();
         }
 
         private static bool DefaultFilter(T t)
@@ -488,7 +501,7 @@ namespace ContractConfigurator.Parameters
             // Set our state
             ApplyFilterToDest(values);
             int count = GetCount(values, dest);
-            LoggingUtil.LogVerbose(this, "Count = " + count);
+            LoggingUtil.LogVerbose(this, "Count = {0}", count);
             bool countConditionMet = (count >= minCount && count <= maxCount);
             if (!checkOnly)
             {

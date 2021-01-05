@@ -5,6 +5,7 @@ using System.Text;
 using UnityEngine;
 using KSP;
 using ContractConfigurator.Util;
+using KSP.Localization;
 
 namespace ContractConfigurator
 {
@@ -50,7 +51,7 @@ namespace ContractConfigurator
                 }
                 catch (Exception e)
                 {
-                    LoggingUtil.LogError(this, "Couldn't load PQSCity with name '" + pqsCity + "'");
+                    LoggingUtil.LogError(this, "Couldn't load PQSCity with name '{0}'", pqsCity);
                     LoggingUtil.LogException(e);
                     valid = false;
                 }
@@ -102,23 +103,12 @@ namespace ContractConfigurator
 
         protected override string RequirementText()
         {
-            string scanName;
-            if (scanType == "AltimetryLoRes")
-            {
-                scanName = "low resolution altimetry";
-            }
-            else if (scanType == "AltimetryHiRes")
-            {
-                scanName = "high resolution altimetry";
-            }
-            else
-            {
-                scanName = scanType.ToLower();
-            }
+            string body = targetBody == null ? Localizer.GetStringByTag("#cc.req.ProgressCelestialBody.genericBody") : targetBody.displayName;
+            string lat = StringBuilderCache.Format("<color=#{0}>{1}</color>", MissionControlUI.RequirementHighlightColor, latitude.ToString("N1"));
+            string lon = StringBuilderCache.Format("<color=#{0}>{1}</color>", MissionControlUI.RequirementHighlightColor, longitude.ToString("N1"));
 
-            string output = "Must " + (invertRequirement ? "not " : "") + "have scanned location <color=#" + MissionControlUI.RequirementHighlightColor + ">" + latitude.ToString("N1") + ", " + longitude.ToString("N1") +
-                "</color> on " + (targetBody == null ? "the target body" : targetBody.CleanDisplayName(true)) + " using the " + scanName + " scanner";
-            return output;
+            return Localizer.Format(invertRequirement ? "#cc.scansat.req.SCANsatLocationCoverage.x" : "#cc.scansat.req.SCANsatLocationCoverage",
+                SCANsatCoverage.ScanDisplayName(scanType), lat, lon, body);
         }
     }
 }

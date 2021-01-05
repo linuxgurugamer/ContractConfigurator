@@ -5,6 +5,7 @@ using System.Text;
 using UnityEngine;
 using KSP;
 using KSPAchievements;
+using KSP.Localization;
 
 namespace ContractConfigurator
 {
@@ -13,16 +14,15 @@ namespace ContractConfigurator
     /// </summary>
     public class SurfaceEVARequirement : ProgressCelestialBodyRequirement
     {
+        protected override ProgressNode GetTypeSpecificProgressNode(CelestialBodySubtree celestialBodySubtree)
+        {
+            return celestialBodySubtree.surfaceEVA;
+        }
+
         public override bool RequirementMet(ConfiguredContract contract)
         {
             return base.RequirementMet(contract) &&
-                GetCelestialBodySubtree().surfaceEVA.IsComplete;
-        }
-
-        protected override string RequirementText()
-        {
-            string output = "Must " + (invertRequirement ? "not " : "") + "have performed a surface EVA on " + (targetBody == null ? "the target body" : targetBody.CleanDisplayName(true));
-            return output;
+                GetCelestialBodySubtree().IsComplete;
         }
     }
 }

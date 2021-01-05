@@ -1,4 +1,65 @@
+Contract Configurator 1.31.0
+- Add FirstName and LastName methods to Kerbal.
+- Kerbals and Celestial Bodies used as strings now include the correct Lingoona gender suffixes.
+- Allow PNG/DSS to be auto-detected correctly in dialog boxes.
+
+Contract Configurator 1.30.5
+- Major performance improvements to save loading time (thanks siimav).
+- Fixed SI units not appearing on HasAntenna parameter (thanks Nobody6).
+- Fixed Exploration contracts not being fully disabled when requested (thanks ussdefiant).
+
+Contract Configurator 1.30.4
+- Fixed major issue when Breaking Ground wasn't installed (thanks boribori).
+
+Contract Configurator 1.30.3
+- Deployed Science from Breaking Ground no longer generates tons of message spam.  Instead, the messages (including screen messages) are intercepted and combined into a single more useful message.
+- Re-enable the reload contracts button (may or may not work).
+- Fixed issue where invertRequirement was no longer allowed for Any (and All) REQUIREMENT nodes (thanks Morphisor).
+- Made Asteroid and Comet science into Sun-only science to prevent them from showing up in weird (but valid according to the game) scenarios.  Prevents contracts for things like "comet sample while landed on Kerbin" (thanks Lathari).
+- Cleaned up some duplicated name in the contract type selection settings window (thanks gamerscircle).
+- Added Experiment.ID().
+- Removed a workaround for a stock bug fixed in 1.4.3 (#18267).
+
+Contract Configurator 1.30.2
+- Backport localization tags missing from KSP 1.8 into Contract Configurator (thanks MatjaBrown, TomTheHand, IonTracks & Lignite).
+
+Contract Configurator 1.30.1
+- Translation for Chinese Simplified (thanks tinygrox).
+- Restore compatibility back to KSP 1.8.1.
+- General improvements to error handling.
+- Fixed exception in CollectionScience title when there is no targetBody (thanks Morphisor).
+
+Contract Configurator 1.30.0
+- Recompile against KSP 1.10.1.
+- Localization support.
+- Added Format() function to expressions to support better contract pack localization.
+- Partial translation for Chinese Simplified (thanks tinygrox).
+- Support for Breaking Ground science.
+- Support for comet science.
+- Added Mission Control icons for Sentinel (KSP 1.3) and Robotics (Breaking Ground) stock contracts.
+- Significant cleanup of string addition to reduce garbage generation.
+- Support all tracking station object size classes up to I in SpawnVessel.
+- Allow apostrophe in AgentParser, fixes Kerbin-Side Jobs.
+- Improved some validation in Requirement nodes to throw certain errors at contract validation time instead of at run-time.
+- Fixed issue where biomes without a Celestial Body (targetBody) specified weren't smart enough to figure out which body they were for.
+
+Contract Configurator 1.29.0
+- Recompile against KSP 1.9.1.
+- Fixed various vessel spawning issues.
+
+Contract Configurator 1.28.3
+- More changes to AgentParser, now commas are disallowed as part of agent names (thanks Tonas1997).
+- Fixed requirements being regenerated incorrectly on some contracts, resolves issues with "flickering" of contracts in mission control (thanks severedsolo).
+
+Contract Configurator 1.28.2
+- Allowed a wider range of Agent names to be parsed by the AgentParser (thanks Morphisor244).
+- Add ModuleManager patch to fix old Agent definitions with a missing title (thanks Tonka Crash).
+
 Contract Configurator 1.28.1
+- Added new AgentParser (allows for assigning a random agency through expressions).
+- Merged change to improve accuracy of great circle distance in contract distance calculations (thanks pap1723).
+- Merged change to fix issues with certain celestial body progress requirements not working correctly for the manned/unmanned checks (thanks SirMortimer).
+- Fixed issue with planet packs that renamed Kerbin displaying the name in lower case (thanks TheSpaceDad).
 - Fixed incorrect requirement text when FacilityRequirement and maxLevel are used (thanks histalonia).
 
 Contract Configurator 1.28.0

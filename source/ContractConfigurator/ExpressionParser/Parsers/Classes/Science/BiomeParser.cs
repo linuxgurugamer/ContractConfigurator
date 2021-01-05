@@ -25,7 +25,7 @@ namespace ContractConfigurator.ExpressionParser
 
         public static void RegisterMethods()
         {
-            RegisterMethod(new Method<Biome, string>("Name", biome => biome == null ? "" : Biome.PrintBiomeName(biome.biome)));
+            RegisterMethod(new Method<Biome, string>("Name", biome => biome == null ? "" : ScienceUtil.GetBiomedisplayName(biome.body, biome.biome)));
             RegisterMethod(new Method<Biome, string>("FullName", biome => biome == null ? "" : biome.ToString()));
             RegisterMethod(new Method<Biome, CelestialBody>("CelestialBody", biome => biome == null ? null : biome.body));
             RegisterMethod(new Method<Biome, bool>("IsKSC", biome => biome == null ? false : biome.IsKSC()));
@@ -82,7 +82,30 @@ namespace ContractConfigurator.ExpressionParser
                 return null;
             }
 
-            return new Biome(null, identifier);
+            if (currentDataNode.IsInitialized("targetBody"))
+            {
+                object nodeBody = currentDataNode["targetBody"];
+
+                List<CelestialBody> listBody = nodeBody as List<CelestialBody>;
+                CelestialBody body = nodeBody as CelestialBody;
+                if (listBody != null)
+                {
+                    body = listBody.First();
+                }
+
+                if (body != null)
+                {
+                    return new Biome(body, identifier);
+                }
+                else
+                {
+                    return new Biome(null, identifier);
+                }
+            }
+            else
+            {
+                throw new DataNode.ValueNotInitialized(currentDataNode.Path() + "targetBody");
+            }
         }
     }
 }

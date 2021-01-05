@@ -5,6 +5,7 @@ using System.Text;
 using UnityEngine;
 using KSP;
 using KSPAchievements;
+using KSP.Localization;
 
 namespace ContractConfigurator
 {
@@ -16,24 +17,21 @@ namespace ContractConfigurator
     {
         public override bool LoadFromConfig(ConfigNode configNode)
         {
-            // Load base class
-            bool valid = base.LoadFromConfig(configNode);
+            // Disallow Kerbin
+            allowKerbin = false;
+            return base.LoadFromConfig(configNode);
+        }
 
-            return valid;
+        protected override ProgressNode GetTypeSpecificProgressNode(CelestialBodySubtree celestialBodySubtree)
+        {
+            return celestialBodySubtree.returnFromSurface;
         }
 
         public override bool RequirementMet(ConfiguredContract contract)
         {
             // This appears bugged - returnFromSurface is null
             return base.RequirementMet(contract) &&
-                GetCelestialBodySubtree().returnFromSurface.IsComplete;
-        }
-
-        protected override string RequirementText()
-        {
-            string output = "Must " + (invertRequirement ? "not " : "") + "have returned from " + ACheckTypeString() + "landing on " + (targetBody == null ? "the target body" : targetBody.CleanDisplayName(true));
-
-            return output;
+                GetCelestialBodySubtree().IsComplete;
         }
     }
 }

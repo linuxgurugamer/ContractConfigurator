@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP;
 using Contracts;
 using Contracts.Parameters;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -34,18 +35,20 @@ namespace ContractConfigurator.Parameters
             {
                 this.title = "Mass: ";
 
+                string massStr;
                 if (maxMass == float.MaxValue)
                 {
-                    this.title += "At least " + minMass + " tons";
+                    massStr = Localizer.Format("#cc.param.VesselMass.atLeast", minMass);
                 }
                 else if (minMass == 0.0)
                 {
-                    this.title += "At most " + maxMass + " tons";
+                    massStr = Localizer.Format("#cc.param.VesselMass.atMost", maxMass);
                 }
                 else
                 {
-                    this.title += "Between " + minMass + " and " + maxMass + " tons";
+                    massStr = Localizer.Format("#cc.param.VesselMass.between", minMass, maxMass);
                 }
+                this.title = Localizer.Format("#cc.param.VesselMass", massStr);
             }
             else
             {
@@ -97,7 +100,7 @@ namespace ContractConfigurator.Parameters
         /// <returns>Whether the vessel meets the condition</returns>
         protected override bool VesselMeetsCondition(Vessel vessel)
         {
-            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: " + vessel.id);
+            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: {0}", vessel.id);
             float mass = vessel.GetTotalMass();
             return mass >= minMass && mass <= maxMass;
         }

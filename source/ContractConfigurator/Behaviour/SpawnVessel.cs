@@ -108,16 +108,16 @@ namespace ContractConfigurator.Behaviour
                 if (vessel.pqsCity != null)
                 {
                     // Generate PQS city coordinates
-                    LoggingUtil.LogVerbose(this, "Generating coordinates from PQS city for Vessel " + vessel.name);
+                    LoggingUtil.LogVerbose(this, "Generating coordinates from PQS city for Vessel {0}", vessel.name);
 
                     // Translate by the PQS offset (inverse transform of coordinate system)
                     Vector3d position = vessel.pqsCity.transform.position;
-                    LoggingUtil.LogVerbose(this, "    pqs city position = " + position);
+                    LoggingUtil.LogVerbose(this, "    pqs city position = {0}", position);
                     Vector3d v = vessel.pqsOffset;
                     Vector3d i = vessel.pqsCity.transform.right;
                     Vector3d j = vessel.pqsCity.transform.forward;
                     Vector3d k = vessel.pqsCity.transform.up;
-                    LoggingUtil.LogVerbose(this, "    i, j, k = " + i + ", " + j + "," + k);
+                    LoggingUtil.LogVerbose(this, "    i, j, k = {0}, {1}, {2}", i, j, k);
                     Vector3d offsetPos = new Vector3d(
                         (j.y * k.z - j.z * k.y) * v.x + (i.z * k.y - i.y * k.z) * v.y + (i.y * j.z - i.z * j.y) * v.z,
                         (j.z * k.x - j.x * k.z) * v.x + (i.x * k.z - i.z * k.x) * v.y + (i.z * j.x - i.x * j.z) * v.z,
@@ -126,7 +126,7 @@ namespace ContractConfigurator.Behaviour
                     offsetPos *= (i.x * j.y * k.z) + (i.y * j.z * k.x) + (i.z * j.x * k.y) - (i.z * j.y * k.x) - (i.y * j.x * k.z) - (i.x * j.z * k.y);
                     vessel.latitude = vessel.body.GetLatitude(position + offsetPos);
                     vessel.longitude = vessel.body.GetLongitude(position + offsetPos);
-                    LoggingUtil.LogVerbose(this, "    resulting lat, lon = (" + vessel.latitude + ", " + vessel.longitude + ")");
+                    LoggingUtil.LogVerbose(this, "    resulting lat, lon = ({0}, {1})", vessel.latitude, vessel.longitude);
                 }
 
                 vessels.Add(new VesselData(vessel));
@@ -190,7 +190,7 @@ namespace ContractConfigurator.Behaviour
                             }
                             catch (Exception e)
                             {
-                                LoggingUtil.LogError(typeof(WaypointGenerator), "Couldn't load PQSCity with name '" + pqsCityStr + "'");
+                                LoggingUtil.LogError(typeof(WaypointGenerator), "Couldn't load PQSCity with name '{0}'", pqsCityStr);
                                 LoggingUtil.LogException(e);
                                 valid = false;
                             }
@@ -290,7 +290,7 @@ namespace ContractConfigurator.Behaviour
             // Spawn the vessel in the game world
             foreach (VesselData vesselData in vessels)
             {
-                LoggingUtil.LogVerbose(this, "Spawning a vessel named '" + vesselData.name + "'");
+                LoggingUtil.LogVerbose(this, "Spawning a vessel named '{0}'", vesselData.name);
 
                 // Set additional info for landed vessels
                 bool landed = false;
@@ -323,8 +323,7 @@ namespace ContractConfigurator.Behaviour
                     shipConstruct = ShipConstruction.LoadShip(gameDataDir + "/" + vesselData.craftURL);
                     if (shipConstruct == null)
                     {
-                        LoggingUtil.LogError(this, "ShipConstruct was null when tried to load '" + vesselData.craftURL +
-                            "' (usually this means the file could not be found).");
+                        LoggingUtil.LogError(this, "ShipConstruct was null when tried to load '{0}' (usually this means the file could not be found).", vesselData.craftURL);
                         continue;
                     }
 
@@ -351,30 +350,48 @@ namespace ContractConfigurator.Behaviour
                         // why.  End result is the vessel exploding, so let's just set it to a positive
                         // value.
                         p.temperature = 1.0;
+
+                        p.UpdateOrgPosAndRot(shipConstruct.parts[0]);
                     }
 
-                    // Estimate an object class, numbers are based on the in game description of the
-                    // size classes.
+                    // Estimate an object class, numbers are based on the code that generate objects.
                     float size = shipConstruct.shipSize.magnitude / 2.0f;
-                    if (size < 4.0f)
+                    if (size < 4.05f)
                     {
                         sizeClass = UntrackedObjectClass.A;
                     }
-                    else if (size < 7.0f)
+                    else if (size < 6.75f)
                     {
                         sizeClass = UntrackedObjectClass.B;
                     }
-                    else if (size < 12.0f)
+                    else if (size < 11.25f)
                     {
                         sizeClass = UntrackedObjectClass.C;
                     }
-                    else if (size < 18.0f)
+                    else if (size < 18.25f)
                     {
                         sizeClass = UntrackedObjectClass.D;
                     }
-                    else
+                    else if (size < 31.25f || (Versioning.version_major <= 1 && Versioning.version_minor <= 10))
                     {
                         sizeClass = UntrackedObjectClass.E;
+                    }
+                    // Only for KSP 1.10+
+                    else if (size < 52.125f)
+                    {
+                        sizeClass = UntrackedObjectClass.F;
+                    }
+                    else if (size < 86.875f)
+                    {
+                        sizeClass = UntrackedObjectClass.G;
+                    }
+                    else if (size < 144.75f)
+                    {
+                        sizeClass = UntrackedObjectClass.H;
+                    }
+                    else
+                    {
+                        sizeClass = UntrackedObjectClass.I;
                     }
 
                     foreach (CrewData cd in vesselData.crew)
@@ -404,7 +421,7 @@ namespace ContractConfigurator.Behaviour
 
                         if (!success)
                         {
-                            LoggingUtil.LogWarning(this, "Unable to add crew to vessel named '" + vesselData.name + "'.  Perhaps there's no room?");
+                            LoggingUtil.LogWarning(this, "Unable to add crew to vessel named '{0}'.  Perhaps there's no room?", vesselData.name);
                             break;
                         }
                     }
@@ -421,6 +438,8 @@ namespace ContractConfigurator.Behaviour
                     // Create the ProtoPartSnapshot objects and then initialize them
                     foreach (Part p in shipConstruct.parts)
                     {
+                        p.flightID = ShipConstruction.GetUniqueFlightID(HighLogic.CurrentGame.flightState);
+                        p.vessel = dummyVessel;
                         dummyProto.protoPartSnapshots.Add(new ProtoPartSnapshot(p, dummyProto));
                     }
                     foreach (ProtoPartSnapshot p in dummyProto.protoPartSnapshots)
@@ -432,6 +451,10 @@ namespace ContractConfigurator.Behaviour
                     partNodes = dummyProto.protoPartSnapshots.Select<ProtoPartSnapshot, ConfigNode>(GetNodeForPart).ToArray();
 
                     // Clean up
+                    foreach (Part p in shipConstruct.parts)
+                    {
+                        GameObject.Destroy(p.gameObject);
+                    }
                     GameObject.Destroy(dummyVessel.gameObject);
                 }
                 else
@@ -708,7 +731,7 @@ namespace ContractConfigurator.Behaviour
 
         private void OnVesselRecovered(ProtoVessel v, bool quick)
         {
-            LoggingUtil.LogVerbose(this, "OnVesselRecovered: " + v);
+            LoggingUtil.LogVerbose(this, "OnVesselRecovered: {0}", v);
 
             // EVA vessel
             if (v.vesselType == VesselType.EVA)
@@ -716,7 +739,7 @@ namespace ContractConfigurator.Behaviour
                 foreach (ProtoPartSnapshot p in v.protoPartSnapshots)
                 {
                     {
-                        LoggingUtil.LogVerbose(this, "    p: " + p);
+                        LoggingUtil.LogVerbose(this, "    p: {0}", p);
                         foreach (string name in p.protoCrewNames)
                         {
                             // Find this crew member in our data

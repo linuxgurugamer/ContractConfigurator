@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
-using KSP;
+using KSP.Localization;
 using Contracts;
 using ContractConfigurator.Parameters;
 
@@ -263,18 +263,9 @@ namespace ContractConfigurator
             }
         }
 
-        private static string[] strArr = { "" };
         public static string CleanDisplayName(this CelestialBody body, bool lower=false)
         {
-            strArr[0] = body.GetDisplayName();
-            string displayName = KSP.Localization.Localizer.Format("<<1>>", strArr);
-
-            if (lower && displayName != body.name)
-            {
-                displayName = Char.ToLowerInvariant(displayName[0]) + displayName.Substring(1);
-            }
-
-            return displayName;
+            return lower ? Localizer.Format("<<1>>", body.displayName) : Localizer.Format("<<C:1>>", body.displayName);
         }
     }
 }

@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP;
 using Contracts;
 using Contracts.Parameters;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -35,7 +36,7 @@ namespace ContractConfigurator.Parameters
             string output;
             if (string.IsNullOrEmpty(title))
             {
-                output = "Vessel: Not " + ContractVesselTracker.GetDisplayName(vesselKey);
+                output = Localizer.Format("#cc.param.IsNotVessel", ContractVesselTracker.GetDisplayName(vesselKey));
             }
             else
             {
@@ -90,7 +91,7 @@ namespace ContractConfigurator.Parameters
         /// <returns>Whether the vessel meets the condition</returns>
         protected override bool VesselMeetsCondition(Vessel vessel)
         {
-            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: " + vessel.id);
+            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: {0}", vessel.id);
             return ContractVesselTracker.Instance.GetAssociatedVessel(vesselKey) != vessel;
         }
     }

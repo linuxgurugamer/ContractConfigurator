@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP;
 using Contracts;
 using Contracts.Parameters;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -40,39 +41,27 @@ namespace ContractConfigurator.Parameters
             {
                 if (vessels.Count == 1)
                 {
-                    output = ContractVesselTracker.GetDisplayName(vessels[0]) + ": Not destroyed";
+                    output = Localizer.Format("#cc.param.VesselNotDestroyed", ContractVesselTracker.GetDisplayName(vessels[0]));
                 }
                 else if (vessels.Count != 0)
                 {
-                    output = "Vessels not destroyed: ";
-                    bool first = true;
-                    foreach (string vessel in vessels)
-                    {
-                        output += (first ? "" : ", ") + ContractVesselTracker.GetDisplayName(vessel);
-                        first = false;
-                    }
+                    output = Localizer.Format("#cc.param.VesselNotDestroyed", LocalizationUtil.LocalizeList<string>(LocalizationUtil.Conjunction.OR, vessels, v => ContractVesselTracker.GetDisplayName(v)));
                 }
                 else if (Parent is VesselParameterGroup && ((VesselParameterGroup)Parent).VesselList.Any())
                 {
                     IEnumerable<string> vesselList = ((VesselParameterGroup)Parent).VesselList;
                     if (vesselList.Count() == 1)
                     {
-                        output = ContractVesselTracker.GetDisplayName(vesselList.First()) + ": Not destroyed";
+                        output = Localizer.Format("#cc.param.VesselNotDestroyed", ContractVesselTracker.GetDisplayName(vesselList.First()));
                     }
                     else
                     {
-                        output = "Vessels not destroyed: ";
-                        bool first = true;
-                        foreach (string vessel in vesselList)
-                        {
-                            output += (first ? "" : ", ") + ContractVesselTracker.GetDisplayName(vessel);
-                            first = false;
-                        }
+                        output = Localizer.Format("#cc.param.VesselNotDestroyed", LocalizationUtil.LocalizeList<string>(LocalizationUtil.Conjunction.OR, vesselList, v => ContractVesselTracker.GetDisplayName(v)));
                     }
                 }
                 else
                 {
-                    output = "No vessels destroyed";
+                    output = Localizer.GetStringByTag("#cc.param.VesselNotDestroyed.any");
                 }
             }
             else
@@ -123,7 +112,7 @@ namespace ContractConfigurator.Parameters
             base.OnPartJointBreak(p, breakForce);
 
             Vessel v = p.Parent.vessel;
-            LoggingUtil.LogVerbose(this, "OnPartJointBreak: " + v.id);
+            LoggingUtil.LogVerbose(this, "OnPartJointBreak: {0}", v.id);
             if (v.vesselType == VesselType.Debris)
             {
                 return;
@@ -161,7 +150,7 @@ namespace ContractConfigurator.Parameters
         protected override void OnVesselCreate(Vessel vessel)
         {
             base.OnVesselCreate(vessel);
-            LoggingUtil.LogVerbose(this, "OnVesselCreate: " + vessel.id);
+            LoggingUtil.LogVerbose(this, "OnVesselCreate: {0}", vessel.id);
 
             if (addNextVessel)
             {
@@ -173,7 +162,7 @@ namespace ContractConfigurator.Parameters
 
         protected virtual void OnVesselWillDestroy(Vessel v)
         {
-            LoggingUtil.LogVerbose(this, "OnVesselWillDestroy: " + v.id);
+            LoggingUtil.LogVerbose(this, "OnVesselWillDestroy: {0}", v.id);
 
             // Give a quarter second grace for detecting a "destroyed" EVA that is actually just a boarding event
             if (v.vesselType == VesselType.EVA && Time.fixedTime - lastVesselChange < 0.25)
@@ -220,7 +209,7 @@ namespace ContractConfigurator.Parameters
             {
                 if (keys.Contains(vessel))
                 {
-                    LoggingUtil.LogVerbose(this, "Specific vessel match on '" + vessel + "', failing parameter.");
+                    LoggingUtil.LogVerbose(this, "Specific vessel match on '{0}', failing parameter.", vessel);
                     SetState(ParameterState.Failed);
                     return;
                 }
@@ -235,7 +224,7 @@ namespace ContractConfigurator.Parameters
             }
 
             Vessel v = p.vessel;
-            LoggingUtil.LogVerbose(this, "OnPartDie: " + v.id);
+            LoggingUtil.LogVerbose(this, "OnPartDie: {0}", v.id);
             if (!v.IsControllable)
             {
                 LoggingUtil.LogVerbose(this, "Vessel not contrallable, treating part death as vessel death");

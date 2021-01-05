@@ -8,6 +8,7 @@ using KSP;
 using Contracts;
 using Contracts.Parameters;
 using ContractConfigurator.Util;
+using KSP.Localization;
 
 namespace ContractConfigurator.Parameters
 {
@@ -18,9 +19,9 @@ namespace ContractConfigurator.Parameters
     {
         public static string Print(this ScienceRecoveryMethod recoveryMethod)
         {
-            if (recoveryMethod == ScienceRecoveryMethod.RecoverOrTransmit)
+            if (recoveryMethod != ScienceRecoveryMethod.Ideal)
             {
-                return "Recover or transmit";
+                return Localizer.GetStringByTag(StringBuilderCache.Format("#cc.param.CollectScience.rm.{0}", recoveryMethod.ToString()));
             }
             return recoveryMethod.ToString();
         }
@@ -102,27 +103,28 @@ namespace ContractConfigurator.Parameters
             string output = null;
             if (string.IsNullOrEmpty(title))
             {
-                output = "Collect science";
-                if (state == ParameterState.Complete)
+                if (state != ParameterState.Complete)
                 {
-                    output += ": " + (experiment.Count > 1 ? "Various experiments" : ExperimentName(experiment[0])) + " from ";
+                    output = Localizer.GetStringByTag("#cc.param.CollectScience.0");
+                }
+                else
+                {
+                    string experimentStr = (experiment.Count > 1 ? Localizer.GetStringByTag("#cc.science.experiment.many") : ExperimentName(experiment[0]));
+                    string biomeStr = string.IsNullOrEmpty(biome) ? (targetBody == null ? null : targetBody.displayName) : new Biome(targetBody, biome).ToString();
+                    string situationStr = situation != null ? situation.Value.Print().ToLower() :
+                        location != null ? Localizer.GetStringByTag(location.Value == BodyLocation.Surface ? "#cc.science.location.Surface" : "#cc.science.location.Space") : null;
 
-                    if (!string.IsNullOrEmpty(biome))
+                    if (biomeStr == null)
                     {
-                        output += new Biome(targetBody, biome).ToString();
+                        output = Localizer.Format("#cc.param.CollectScience.1", experimentStr);
+                    }
+                    else if (situationStr == null)
+                    {
+                        output = Localizer.Format("#cc.param.CollectScience.2", experimentStr, biomeStr);
                     }
                     else
                     {
-                        output += targetBody.CleanDisplayName(true);
-                    }
-                    
-                    if (situation != null)
-                    {
-                        output += " while " + situation.Value.Print().ToLower();
-                    }
-                    else if (location != null)
-                    {
-                        output += location.Value == BodyLocation.Surface ? " while on the surface" : " while in space";
+                        output = Localizer.Format("#cc.param.CollectScience.3", experimentStr, biomeStr, situationStr);
                     }
                 }
             }
@@ -138,51 +140,50 @@ namespace ContractConfigurator.Parameters
             // Filter for celestial bodies
             if (targetBody != null && string.IsNullOrEmpty(biome))
             {
-                AddParameter(new ParameterDelegate<Vessel>("Destination: " + targetBody.CleanDisplayName(),
-                    subj => FlightGlobals.currentMainBody == targetBody, true));
+                AddParameter(new ParameterDelegate<Vessel>(Localizer.Format("#cc.param.CollectScience.destination", targetBody.displayName),
+                    subj => FlightGlobals.currentMainBody == targetBody, true)).ID = "destination";
             }
 
             // Filter for biome
             if (!string.IsNullOrEmpty(biome))
             {
                 Biome b = new Biome(targetBody, biome);
-                string title = b.IsKSC() ? "Location: " : "Biome: ";
+                string title = Localizer.Format(b.IsKSC() ? "#cc.param.CollectScience.location" : "#cc.param.CollectScience.biome", b);
 
-                AddParameter(new ParameterDelegate<Vessel>(title + b,
-                    subj => CheckBiome(FlightGlobals.ActiveVessel)));
+                AddParameter(new ParameterDelegate<Vessel>(title,
+                    subj => CheckBiome(FlightGlobals.ActiveVessel))).ID = "biome";
             }
 
             // Filter for situation
             if (situation != null)
             {
-                AddParameter(new ParameterDelegate<Vessel>("Situation: " + situation.Value.Print(),
-                    subj => FlightGlobals.ActiveVessel != null && ScienceUtil.GetExperimentSituation(FlightGlobals.ActiveVessel) == situation));
+                AddParameter(new ParameterDelegate<Vessel>(Localizer.Format("#cc.param.CollectScience.situation", situation.Value.Print()),
+                    subj => FlightGlobals.ActiveVessel != null && ScienceUtil.GetExperimentSituation(FlightGlobals.ActiveVessel) == situation)).ID = "situation";
             }
 
             // Filter for location
             if (location != null)
             {
-                AddParameter(new ParameterDelegate<Vessel>("Location: " + location,
-                    subj => FlightGlobals.ActiveVessel != null && ((location != BodyLocation.Surface) ^ FlightGlobals.ActiveVessel.LandedOrSplashed)));
+                AddParameter(new ParameterDelegate<Vessel>(Localizer.Format("#cc.param.CollectScience.location", location),
+                    subj => FlightGlobals.ActiveVessel != null && ((location != BodyLocation.Surface) ^ FlightGlobals.ActiveVessel.LandedOrSplashed))).ID = "location";
             }
 
             // Add the experiments
             foreach (string exp in experiment)
             {
-                string experimentStr = string.IsNullOrEmpty(exp) ? "Any" : ExperimentName(exp);
-                ContractParameter experimentParam = AddParameter(new ParameterDelegate<Vessel>("Experiment: " +
-                    experimentStr, subj => recoveryDone.ContainsKey(exp)));
+                string experimentStr = string.IsNullOrEmpty(exp) ? Localizer.GetStringByTag("#cc.science.experiment.any") : ExperimentName(exp);
+                ContractParameter experimentParam = AddParameter(new ParameterDelegate<Vessel>(Localizer.Format("#cc.param.CollectScience.experiment",
+                    experimentStr), subj => recoveryDone.ContainsKey(exp)));
+                experimentParam.ID = "experiment";
 
                 // Add the subject
-                ContractParameter subjectParam = new ParameterDelegate<Vessel>("", subj => true);
-                subjectParam.ID = exp + "Subject";
-                experimentParam.AddParameter(subjectParam);
+                experimentParam.AddParameter(new ParameterDelegate<Vessel>("", subj => true)).ID = exp + "Subject";
 
                 // Filter for recovery
                 if (recoveryMethod != ScienceRecoveryMethod.None)
                 {
-                    ContractParameter recoveryParam = experimentParam.AddParameter(new ParameterDelegate<Vessel>("Recovery: " +
-                        RecoveryMethod(exp).Print(), subj => false));
+                    experimentParam.AddParameter(new ParameterDelegate<Vessel>(Localizer.Format("#cc.param.CollectScience.recovery",
+                        RecoveryMethod(exp).Print()), subj => false)).ID = "recovery";
                 }
             }
         }
@@ -200,8 +201,8 @@ namespace ContractConfigurator.Parameters
                 string oldTitle = param.Title;
                 if (matchingSubjects.Count == experiment.Count)
                 {
-                    if (param.ID.Contains("Destination:") || param.ID.Contains("Biome:") || param.ID.Contains("Situation:") ||
-                        param.ID.Contains("Location:"))
+                    if (param.ID.Equals("destination") || param.ID.Equals("biome") || param.ID.Equals("situation") ||
+                        param.ID.Equals("location"))
                     {
                         param.ClearTitle();
                     }
@@ -398,7 +399,7 @@ namespace ContractConfigurator.Parameters
             {
                 return;
             }
-            LoggingUtil.LogVerbose(this, "OnExperimentDeployed: " + scienceData.subjectID + ", " + vessel.id);
+            LoggingUtil.LogVerbose(this, "OnExperimentDeployed: {0}, {1}", scienceData.subjectID, vessel.id);
 
             // Decide if this is a matching subject
             ScienceSubject subject = ResearchAndDevelopment.GetSubjectByID(scienceData.subjectID);
@@ -425,7 +426,7 @@ namespace ContractConfigurator.Parameters
                 return false;
             }
 
-            LoggingUtil.LogVerbose(this, "CheckSubject: " + exp + ", " + subject.id);
+            LoggingUtil.LogVerbose(this, "CheckSubject: {0}, {1}", exp, subject.id);
             if (targetBody != null && !subject.id.Contains(targetBody.name))
             {
                 LoggingUtil.LogVerbose(this, "    wrong target body");
@@ -434,11 +435,11 @@ namespace ContractConfigurator.Parameters
 
             // Need to pick up a bit of the situation string to that Flats doesn't pick up GreaterFlats
             if (!string.IsNullOrEmpty(biome) &&
-                !subject.id.Contains("High" + biome) &&
-                !subject.id.Contains("Low" + biome) &&
-                !subject.id.Contains("ed" + biome))
+                !subject.id.Contains(StringBuilderCache.Format("High{0}", biome)) &&
+                !subject.id.Contains(StringBuilderCache.Format("Low{0}", biome)) &&
+                !subject.id.Contains(StringBuilderCache.Format("ed{0}", biome)))
             {
-                LoggingUtil.LogVerbose(this, "    wrong situation (biome = " + (biome == null ? "null" : biome) + ")");
+                LoggingUtil.LogVerbose(this, "    wrong situation (biome = {0})", (biome == null ? "null" : biome));
                 return false;
             }
 
@@ -468,7 +469,7 @@ namespace ContractConfigurator.Parameters
 
             if (!string.IsNullOrEmpty(exp))
             {
-                LoggingUtil.LogVerbose(this, "    doing final subject check for " + subject.id + " containing " + exp);
+                LoggingUtil.LogVerbose(this, "    doing final subject check for {0} containing {1}", subject.id, exp);
             }
             if (!string.IsNullOrEmpty(exp) && !subject.id.Contains(exp))
             {
@@ -484,10 +485,10 @@ namespace ContractConfigurator.Parameters
         {
             if (protoVessel == null || reverseEngineered)
             {
-                LoggingUtil.LogVerbose(this, "OnScienceReceived: returning, protoVessel = " + (protoVessel == null ? "null" :protoVessel.vesselName) + ", reverseEng = " + reverseEngineered);
+                LoggingUtil.LogVerbose(this, "OnScienceReceived: returning, protoVessel = {0}, reverseEng = {1}", (protoVessel == null ? "null" : protoVessel.vesselName), reverseEngineered);
                 return;
             }
-            LoggingUtil.LogVerbose(this, "OnScienceReceived: " + subject.id + ", " + protoVessel.vesselID);
+            LoggingUtil.LogVerbose(this, "OnScienceReceived: {0}, {1}", subject.id, protoVessel.vesselID);
 
             // Check the given subject is okay
             foreach (string exp in experiment)
@@ -648,7 +649,7 @@ namespace ContractConfigurator.Parameters
         /// <returns>Whether the vessel meets the condition</returns>
         protected override bool VesselMeetsCondition(Vessel vessel)
         {
-            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: " + vessel.id);
+            LoggingUtil.LogVerbose(this, "Checking VesselMeetsCondition: {0}", vessel.id);
 
             ParameterDelegate<Vessel>.CheckChildConditions(this, vessel);
 
